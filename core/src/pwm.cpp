@@ -1,6 +1,7 @@
 #include "pwm.h"
 
 #include <memory>
+#include <unistd.h>
 
 #include <roller/core/log.h>
 #include <roller/core/util.h>
