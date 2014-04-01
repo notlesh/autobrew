@@ -2,5 +2,5 @@ TEMPLATE = subdirs
 
 CONFIG += ordered
 
-SUBDIRS = simple_temp_controller \
+SUBDIRS = pid_temp_controller \
 

@@ -14,6 +14,8 @@ INCLUDEPATH += include/ \
 		../../../owfs_devman/include \
 		../../../raspi_gpio_devman/include \
 
+LIBS += -lboost_program_options \
+
 debug:LIBS += -L../../core/debug/ -lab2_core \
 		-L../../../roller/core/debug/ -lroller_core \
 		-L../../../devman/debug/ -ldevman \
