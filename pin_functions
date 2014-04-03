@@ -1,0 +1,28 @@
+gpio pin #		in/out		relay / device						function
+------------------------------------------------------------------------
+17				out			top transistor / left SSR			pwm for right plug
+18				out			relay #8							back right 120v
+27				out			relay #7							back center 120v
+22				out			relay #6							back left 120v
+23				out			relay #5							-
+24				out			relay #4							bottom 240v relay, left SSR, left plug
+25				out			relay #1							-
+4				out			bottom transistor / right SSR		pwm for left plug
+2				-			-									-
+3				-			-									-
+8				-			-									-
+7				-			-									-
+10				out			relay #3							top 240v relay, right SSR, right plug
+9				out			relay #2							-
+11				-			-									-
+14				in			float switch						float switch
+15				-			-									-
+28				-			-									-
+29				-			-									-
+30				-			-									-
+31				-			-									-
+
+heater plug		ssr				mechanical relay
+------------------------------------------------
+left			left  / 4		bottom / 24
+right			right / 17		top    / 10
