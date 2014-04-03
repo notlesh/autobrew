@@ -1,0 +1,14 @@
+# commands for running brewery from command line
+
+# run PID controller on boil kettle
+sudo ./debug/pid_temp_controller --temp-probe 28.ee9b8b040000 --pin-id 17 --safety-id 10 -s 57
+
+# run PWM controller on boil kettle (at 60% duty -- good for rolling boil)
+sudo ./debug/pwm_temp_controller --temp-probe 28.ee9b8b040000 --pin-id 17 --safety-id 10 -l 0.6 -f 20
+
+#run PID controller on HLT
+sudo ./debug/pid_temp_controller --temp-probe 28.3aa87d040000 --pin-id 4 --safety-id 24 -s 57
+
+# control top pump
+sudo gpio export 18 out
+sudo gpio -g write 18 1
