@@ -21,3 +21,6 @@ alias p2_off="sudo gpio export 27 out; sudo gpio -g write 27 0"
 alias valve_on="sudo gpio export 22 out; sudo gpio -g write 22 1"
 alias valve_off="sudo gpio export 22 out; sudo gpio -g write 22 0"
 alias valve_controller="sudo ~/ab2/tools/valve_controller/debug/valve_controller -v 22 -f 14"
+
+# utilities
+alias ftc="~/ab2/tools/other/ftc.sh"
