@@ -49,7 +49,7 @@ i32 main( i32 argc, char** argv ) {
 	// will handle required, etc.
 	po::notify( mainOptionsMap );
 
-	Log::f( "valve pin id: %d", floatPinId );
+	Log::f( "float pin id: %d", floatPinId );
 	Log::f( "valve pin id: %d", valvePinId );
 
 	g_appRunning = true;
@@ -71,10 +71,12 @@ i32 main( i32 argc, char** argv ) {
 	auto floatPin = DeviceManager::getSwitch(
 			raspiSwitchManagerID,
 			StringId::format( "%d", floatPinId ));
+	floatPin->setMode( Direction::IN );
 
 	auto valvePin = DeviceManager::getSwitch(
 			raspiSwitchManagerID,
 			StringId::format( "%d", valvePinId ));
+	valvePin->setMode( Direction::OUT );
 
 	while ( g_appRunning ) {
 
@@ -82,6 +84,8 @@ i32 main( i32 argc, char** argv ) {
 
 		usleep( 50 * 1000 );
 	}
+
+	valvePin->setState( false );
 
 	DeviceManager::unregisterSwitchManager( raspiSwitchManagerID );
 

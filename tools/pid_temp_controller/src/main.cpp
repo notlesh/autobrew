@@ -70,9 +70,6 @@ i32 main( i32 argc, char** argv ) {
 	Log::f( "setpoint: %.2f", setpoint );
 	Log::f( "tolerance: %.2f", tolerance );
 
-	// XXX: testing
-	if ( true ) { return 0; }
-
 	g_appRunning = true;
 
 	setbuf( stdout, nullptr );
@@ -131,21 +128,25 @@ i32 main( i32 argc, char** argv ) {
 
 	while ( g_appRunning ) {
 
-		temp = sensor->getTemperature( time );
-		i64 now = getTime();
+		try {
+			temp = sensor->getTemperature( time );
+			i64 now = getTime();
 
-		// print every 5s
-		if ( now - lastPrintTime > 5000 ) {
-			Log::i( "%lld : %d", now, temp );
-			Log::i( "PID: %f", pid.getOutput() );
-			lastPrintTime += 5000;
+			// print every 5s
+			if ( now - lastPrintTime > 5000 ) {
+				Log::i( "%lld : %d", now, temp );
+				Log::i( "PID: %f", pid.getOutput() );
+				lastPrintTime += 5000;
+			}
+
+			// update pid
+			pid.update( ((f32)temp / 1000.f), ((f32)(now - lastPIDUpdateTime) / 1000.0f) );
+			lastPIDUpdateTime = now;
+
+			pwm.setLoadCycle( (pid.getOutput() / 100.0f ));
+		} catch ( const exception& e ) {
+			Log::w( "Warning: caught exception (ignoring): %s", e.what() );
 		}
-
-		// update pid
-		pid.update( ((f32)temp / 1000.f), ((f32)(now - lastPIDUpdateTime) / 1000.0f) );
-		lastPIDUpdateTime = now;
-
-		pwm.setLoadCycle( (pid.getOutput() / 100.0f ));
 
 		usleep( 50 * 1000 );
 	}

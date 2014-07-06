@@ -61,7 +61,7 @@ i32 main( i32 argc, char** argv ) {
 	Log::f( "pin id: %d", ssrPinId );
 	Log::f( "safety pin id: %d", safetyPinId );
 	Log::f( "load: %.2f", load );
-	Log::f( "frequency: %.2f", freq );
+	Log::f( "frequency: %df", freq );
 
 	g_appRunning = true;
 
@@ -113,13 +113,17 @@ i32 main( i32 argc, char** argv ) {
 
 	while ( g_appRunning ) {
 
-		temp = sensor->getTemperature( time );
-		i64 now = getTime();
+		try {
+			temp = sensor->getTemperature( time );
+			i64 now = getTime();
 
-		// print every 5s
-		if ( now - lastPrintTime > 5000 ) {
-			Log::i( "%lld : %d", now, temp );
-			lastPrintTime += 5000;
+			// print every 5s
+			if ( now - lastPrintTime > 5000 ) {
+				Log::i( "%lld : %d", now, temp );
+				lastPrintTime += 5000;
+			}
+		} catch ( const exception& e ) {
+			Log::w( "Warning: caught exception (ignoring): %s", e.what() );
 		}
 
 

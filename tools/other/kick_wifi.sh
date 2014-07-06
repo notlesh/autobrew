@@ -6,5 +6,6 @@ if [[ $? != 0 ]]; then
 	# reboot
 
 	echo "Can't ping! Reloading wifi kernel module... `date`" >> ~pi/ping_fail_log
-	modprobe -vr 8192cu && modprobe -v 8192cu
+	modprobe -vr 8192cu >> ~pi/ping_fail_log
+	modprobe -v 8192cu >> ~pi/ping_fail_log
 fi
