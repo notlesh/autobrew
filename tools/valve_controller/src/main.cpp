@@ -78,9 +78,29 @@ i32 main( i32 argc, char** argv ) {
 			StringId::format( "%d", valvePinId ));
 	valvePin->setMode( Direction::OUT );
 
+	bool open = floatPin->getState();
+	i64 lastChange = getTime();
+
 	while ( g_appRunning ) {
 
-		valvePin->setState( floatPin->getState() );
+		bool newState = floatPin->getState();
+
+		if ( newState != open ) {
+
+			i64 now = getTime();
+			i64 elapsed = (now - lastChange);
+			lastChange = now;
+
+			Log::i( "%lld: State changed to %s (%s for %lld)",
+					now,
+					(newState ? "OPEN" : "CLOSED"),
+					(newState ? "Closed" : "Open"),
+					elapsed );
+
+			open = newState;
+		}
+
+		valvePin->setState( newState );
 
 		usleep( 50 * 1000 );
 	}
