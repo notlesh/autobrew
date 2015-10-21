@@ -11,6 +11,8 @@
 #include <roller/core/util.h>
 
 #include "pid.h"
+#include "server_controller.h"
+#include "dummy_controller.h"
 
 #define AB_SERVER_FASTCGI_SOCKET "/var/run/ab.socket"
 #define AB_SERVER_FASTCGI_BACKLOG 8
@@ -33,7 +35,8 @@ void handleRequest( FCGX_Request& request );
 
 // test PID controller
 void handleStartPID();
-std::shared_ptr<PID> s_pidController;
+void handleStopPID();
+std::shared_ptr<DummyController> s_controller;
 
 // mainNULL
 i32 main( i32 argc, char** argv ) {
@@ -133,8 +136,19 @@ void handleRequest( FCGX_Request& request ) {
 
 	} else if (handlerName == "stop_pid") {
 
-		jsonResponse = "{ \"response\": \"Not implemented yet\" }";
-		responseCode = 500;
+		try {
+			handleStopPID();
+
+			jsonResponse = "{ \"response\": \"OK\" }";
+			responseCode = 200;
+
+		} catch ( exception& e ) {
+			Log::w( "caught exception in handleStopPID: %s", e.what() );
+
+			jsonResponse = roller::makeString( "{ \"response\": \"Failed to stop PID controller\", \"reason\": \"%s\"}",
+					e.what());
+			responseCode = 500;
+		}
 
 	} else if (handlerName == "status") {
 
@@ -180,18 +194,21 @@ void handleRequest( FCGX_Request& request ) {
 
 void handleStartPID() {
 
-	if ( s_pidController ) {
-		throw RollerException( "Can't start PID controller; already running" );
+	if ( s_controller ) {
+		throw RollerException( "Can't start dummy controller; already running" );
 	}
 
-	s_pidController.reset(
-			new PID(
-				15.0f,
-				1.0f,
-				3.0f,
-				30.0f,
-				-100.0f,
-				100.0f));
+	s_controller.reset( new DummyController());
+	s_controller->start();
+}
 
-	// TODO: set up a PID/PWM controller, not just a PID class
+void handleStopPID() {
+
+	if ( ! s_controller ) {
+		throw RollerException( "Can't stop dummy controller; none running" );
+	}
+
+	s_controller->stop();
+	s_controller->join();
+	s_controller.reset();
 }
