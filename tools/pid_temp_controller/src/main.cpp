@@ -13,6 +13,7 @@
 
 #include "raspi_gpio_switch.h"
 
+#include "temperature_manager.h"
 #include "pid.h"
 #include "pwm.h"
 
@@ -98,13 +99,14 @@ i32 main( i32 argc, char** argv ) {
 			100.0f );	// max output
 	pid.setErrorAccumulationCap( 1.5f );
 
-	auto sensor = DeviceManager::getTemperatureSensor(
-			owfsManagerID,
-			StringId::intern( tempProbeId ));
+	TemperatureManager tempManager;
+	tempManager.run();
 
 	auto ssrPin = DeviceManager::getSwitch(
 			raspiSwitchManagerID,
 			StringId::format( "%d", ssrPinId ));
+
+	StringId probeId = StringId::intern( tempProbeId );
 
 	// turn safety pin on if it was supplied
 	if ( safetyPinId >= 0 ) {
@@ -129,7 +131,9 @@ i32 main( i32 argc, char** argv ) {
 	while ( g_appRunning ) {
 
 		try {
-			temp = sensor->getTemperature( time );
+
+			ProbeStats stats = tempManager.getProbeStats( probeId );
+			temp = stats._lastTemp;
 			i64 now = getTime();
 
 			// print every 5s
@@ -146,6 +150,8 @@ i32 main( i32 argc, char** argv ) {
 			pwm.setLoadCycle( (pid.getOutput() / 100.0f ));
 		} catch ( const exception& e ) {
 			Log::w( "Warning: caught exception (ignoring): %s", e.what() );
+		} catch ( ... ) {
+			Log::w( "Warning: caught unknown exception (ignoring)" );
 		}
 
 		usleep( 50 * 1000 );
@@ -165,6 +171,8 @@ i32 main( i32 argc, char** argv ) {
 
 		safetyPin->setState( false );
 	}
+
+	tempManager.stop();
 
 	DeviceManager::unregisterTemperatureSensorManager( owfsManagerID );
 	DeviceManager::unregisterSwitchManager( raspiSwitchManagerID );

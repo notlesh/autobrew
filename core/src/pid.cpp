@@ -51,9 +51,11 @@ f32 PID::update( f32 input, f32 dt ) {
 	f32 filteredInput = _inputAccumulation.avg();
 	f32 d = (filteredInput - _lastInput) / dt;
 	_lastInput = filteredInput;
+	/*
 	if ( ! close( d, 0.0f, 0.0001f )) {
 		Log::f( "  d: (%f - %f) / %f = %f", input, _lastInput, dt, d );
 	}
+	*/
 
 	_output = (_kp * p) + (_ki * i) + (_kd * d);
 	// Log::f( "  output: (%.2f * %.2f) + (%.2f * %.2f) + (%.2f * %.2f) = %f", _kp, p, _ki, i, _kd, d, _output );

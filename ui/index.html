@@ -1,0 +1,66 @@
+<html>
+	<head>
+		<script type="text/javascript" src="smoothie.js"></script>
+
+		<script>
+			var g_lastTempData;
+
+			function getLatestTempData() {
+				
+				var request = new XMLHttpRequest;
+				request.overrideMimeType("application/json");
+				console.log("origin: " +window.location.origin );
+				request.open("GET", window.location.origin + "/temp_data.json", true);
+				request.onload = function() {
+					g_lastTempData = JSON.parse(request.responseText);
+				};
+				request.send(null);
+			}
+
+			function load() {
+
+				getLatestTempData();
+
+				var canvas = document.getElementById("mycanvas");
+				canvas.width = window.innerWidth;
+
+				// millis per pixel will be (1000 * 60 * 10) / width -- entire width will give us 10 minutes
+				var mpp = 100;
+				if (canvas.width > 0) {
+					mpp = (1000 * 60 * 10) / canvas.width;
+				}
+				console.log("mpp: " + mpp);
+
+				var smoothie = new SmoothieChart(
+					{
+						millisPerPixel: mpp, 
+						interpolation:"linear", 
+						maxValue:220, 
+						minValue:0,
+						grid: {
+							millisPerLine: 5000
+						}
+					});
+				smoothie.streamTo(canvas, 2000);
+
+				var line1 = new TimeSeries();
+				smoothie.addTimeSeries(line1, {lineWidth:2,strokeStyle:'#00ff00'});
+
+				setInterval(function() {
+					var tempData = g_lastTempData["28.3AA87D040000"];
+					line1.append(tempData.lastSeen, tempData.tempF);
+
+					getLatestTempData();
+				}, 1000);
+
+			}
+			window.onload = load;
+		</script>
+
+		<title>Autobrew Temperatures</title>
+	</head>
+
+	<body style="background-color: black">
+		<canvas id="mycanvas" width="400" height="200" style="width: 100%;"></canvas>
+	</body>
+</html>
