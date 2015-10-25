@@ -4,7 +4,7 @@ alias brew_ls="cat ~/ab2/tools/other/brew_aliases.sh"
 
 # shortcuts for running temp controllers
 alias bk="sudo ~/ab2/tools/pid_temp_controller/debug/pid_temp_controller --temp-probe 28.EE9B8B040000 --pin-id 17 --safety-id 10 -s "
-alias bk_pwm="sudo ~/ab2/tools/pwm_temp_controller/debug/pwm_temp_controller --temp-probe 28.EE9B8B040000 --pin-id 17 --safety-id 10 -f 20 -l "
+alias bk_pwm="sudo ~/ab2/tools/pwm_temp_controller/debug/pwm_temp_controller --pin-id 17 --safety-id 10 -f 20 -l "
 alias hlt="sudo ~/ab2/tools/pid_temp_controller/debug/pid_temp_controller --temp-probe 28.3AA87D040000 --pin-id 4 --safety-id 24 -s "
 
 # print out temps by running a "fake" pwm controller (pins are not hooked up to anything)
@@ -27,3 +27,4 @@ alias valve_controller="sudo ~/ab2/tools/valve_controller/debug/valve_controller
 
 # utilities
 alias ftc="~/ab2/tools/other/ftc.sh"
+alias pre_heat_liquor="sudo ~/ab2/tools/other/pre_heat.sh"

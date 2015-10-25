@@ -93,9 +93,6 @@ i32 main( i32 argc, char** argv ) {
 
 	i64 time = -1;
 
-	i64 lastPIDUpdateTime = getTime();
-	i64 lastPrintTime = getTime() - 5000;
-
 	pwm.setLoadCycle( load );
 
 	while ( g_appRunning ) {
