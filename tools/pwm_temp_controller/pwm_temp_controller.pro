@@ -11,7 +11,6 @@ INCLUDEPATH += include/ \
 		../../core/include \
 		../../../roller/include \
 		../../../devman/include \
-		../../../owfs_devman/include \
 		../../../raspi_gpio_devman/include \
 
 LIBS += -lboost_program_options \
@@ -19,13 +18,11 @@ LIBS += -lboost_program_options \
 debug:LIBS += -L../../core/debug/ -lab2_core \
 		-L../../../roller/core/debug/ -lroller_core \
 		-L../../../devman/debug/ -ldevman \
-		-L../../../owfs_devman/debug/ -lowfs_devman \
 		-L../../../raspi_gpio_devman/debug/ -lraspi_gpio_devman \
 
 release:LIBS +=  -L../../core/release/ -lab2_core \
 		-L../../../roller/core/release/ -lroller_core \
 		-L../../../devman/release/ -ldevman \
-		-L../../../owfs_devman/release/ -lowfs_devman \
 		-L../../../raspi_gpio_devman/release/ -lraspi_gpio_devman \
 
 SOURCES = $$files(src/*.cpp) \
@@ -35,7 +32,6 @@ HEADERS = $$files(include/*.h) \
 QMAKE_RPATHDIR += "../../core/debug/" \
 		"../../../roller/core/debug/" \
 		"../../../devman/debug/" \
-		"../../../owfs_devman/debug/" \
 		"../../../raspi_gpio_devman/debug/" \
 
 release:DESTDIR = release

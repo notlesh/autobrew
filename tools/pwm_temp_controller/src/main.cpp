@@ -9,8 +9,6 @@
 
 #include "device_manager.h"
 
-#include "owfs_sensors.h"
-
 #include "raspi_gpio_switch.h"
 
 #include "pwm.h"
@@ -30,7 +28,6 @@ void handleSignal( i32 sig ) {
 // mainNULL
 i32 main( i32 argc, char** argv ) {
 
-	string tempProbeId;
 	i32 safetyPinId;
 	i32 ssrPinId;
 	f32 load;
@@ -39,7 +36,6 @@ i32 main( i32 argc, char** argv ) {
 	po::options_description mainOptions( "Main options" );
 	mainOptions.add_options()
 		("help,h",																"produce this help message")
-		("temp-probe",		po::value<string>(&tempProbeId)->required(),		"id of the temperature probe to use (required)")
 		("pin-id",			po::value<i32>(&ssrPinId)->required(),				"id of the pin to be controlled (required)")
 		("safety-id",		po::value<i32>(&safetyPinId)->default_value(-1),	"id of the pin used for safety circuit (-1 for none)")
 		("load,l",			po::value<f32>(&load)->required(),					"load to be applied (0-1)")
@@ -57,7 +53,6 @@ i32 main( i32 argc, char** argv ) {
 	// will handle required, etc.
 	po::notify( mainOptionsMap );
 
-	Log::f( "temp probe id: %s", tempProbeId.c_str() );
 	Log::f( "pin id: %d", ssrPinId );
 	Log::f( "safety pin id: %d", safetyPinId );
 	Log::f( "load: %.2f", load );
@@ -76,15 +71,8 @@ i32 main( i32 argc, char** argv ) {
 
 	// set up devman
 
-	auto owfsManager = std::make_shared<OWFSHardwareManager>( "--usb all" );
-	StringId owfsManagerID = DeviceManager::registerTemperatureSensorManager( owfsManager );
-
 	auto raspiGPIOManager = std::make_shared<RaspiGPIOSwitchManager>();
 	StringId raspiSwitchManagerID = DeviceManager::registerSwitchManager( raspiGPIOManager );
-
-	auto sensor = DeviceManager::getTemperatureSensor(
-			owfsManagerID,
-			StringId::intern( tempProbeId ));
 
 	auto ssrPin = DeviceManager::getSwitch(
 			raspiSwitchManagerID,
@@ -104,7 +92,6 @@ i32 main( i32 argc, char** argv ) {
 	pwm.unpause();
 
 	i64 time = -1;
-	i32 temp = -1;
 
 	i64 lastPIDUpdateTime = getTime();
 	i64 lastPrintTime = getTime() - 5000;
@@ -113,21 +100,7 @@ i32 main( i32 argc, char** argv ) {
 
 	while ( g_appRunning ) {
 
-		try {
-			temp = sensor->getTemperature( time );
-			i64 now = getTime();
-
-			// print every 5s
-			if ( now - lastPrintTime > 5000 ) {
-				Log::i( "%lld : %d", now, temp );
-				lastPrintTime += 5000;
-			}
-		} catch ( const exception& e ) {
-			Log::w( "Warning: caught exception (ignoring): %s", e.what() );
-		}
-
-
-		usleep( 50 * 1000 );
+		usleep( 100 * 1000 );
 	}
 
 	pwm.pause();
@@ -145,7 +118,6 @@ i32 main( i32 argc, char** argv ) {
 		safetyPin->setState( false );
 	}
 
-	DeviceManager::unregisterTemperatureSensorManager( owfsManagerID );
 	DeviceManager::unregisterSwitchManager( raspiSwitchManagerID );
 
 	return 0;
