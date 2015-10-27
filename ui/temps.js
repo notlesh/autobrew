@@ -137,7 +137,7 @@ function tempsStart() {
 			series.append(tempData.lastSeen, tempData.tempF);
 
 			var textNode = window.g_numericText[probeId];
-			textNode.nodeValue = "" + tempData.tempF;
+			textNode.nodeValue = "" + tempData.tempF.toFixed(2);
 
 		}
 
