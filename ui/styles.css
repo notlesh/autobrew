@@ -30,3 +30,9 @@
 .probeNumericDisplay {
 	font-size: 52px;
 }
+.scaleLabel {
+	color: #999999;
+	font-size: 20px;
+	display: inline-block;
+	
+}

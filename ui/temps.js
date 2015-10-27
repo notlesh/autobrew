@@ -86,6 +86,50 @@ function resizeChart(event) {
 }
 
 /**
+ * Handle scale change
+ */
+function handleScaleChange(value) {
+	console.log("handleScaleChange("+ value +")");
+	if (value == "1m") {
+		changeScale(60, 5);
+	} else if (value == "5m") {
+		changeScale(60 * 5, 15);
+	} else if (value == "10m") {
+		changeScale(60 * 10, 30);
+	} else if (value == "30m") {
+		changeScale(60 * 30, 60);
+	} else if (value == "1h") {
+		changeScale(3600, 60 * 5);
+	} else if (value == "2h") {
+		changeScale(3600 * 2, 60 * 10);
+	} else if (value == "4h") {
+		changeScale(3600 * 4, 60 * 15);
+	} else if (value == "8h") {
+		changeScale(3600 * 8, 60 * 30);
+	} else if (value == "1d") {
+		changeScale(3600 * 24, 60 * 60);
+	} else if (value == "1w") {
+		changeScale(3600 * 24 * 7, 60 * 60 * 4);
+	}
+}
+
+/**
+ * Change scale
+ *
+ * @secondsTotal is the number of seconds to graph
+ * @secondsGridLines is the number of seconds between grid lines
+ */
+function changeScale(secondsTotal, secondsGridLines)
+{
+
+	var canvas = document.getElementById("chart_canvas");
+	mpp = (1000 * secondsTotal) / canvas.width;
+
+	window.g_smoothie.options.millisPerPixel = mpp;
+	window.g_smoothie.options.grid.millisPerLine = 1000 * secondsGridLines;
+}
+
+/**
  * Main entry point
  */
 function tempsStart() {
