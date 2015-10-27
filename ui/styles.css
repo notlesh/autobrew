@@ -1,0 +1,28 @@
+.button {
+	display: inline-block;
+	border: 1px solid #999999;
+	background-color: #0F0F0F;
+	color: #999999;
+	font-size: 24px;
+
+	margin: 6px;
+	padding: 6px;
+}
+.button:hover {
+	border: 1px solid #CCCCCC;
+	color: #CCCCCC;
+}
+.button:active {
+	border: 1px solid #FFCCCC;
+	color: #FFCCCC;
+	background-color: #1F0F0F;
+}
+
+.button, .noselect {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}

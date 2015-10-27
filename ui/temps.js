@@ -1,6 +1,5 @@
 var g_lastTempData = {};
-var g_canvases = {};
-var g_smoothieCharts = {};
+var g_smoothie = {};
 var g_tempSeries = {};
 
 var g_settings = {
@@ -25,8 +24,8 @@ var g_settings = {
 
 
 /**
-	* Retrieve the latest temperature data JSON
-	*/
+ * Retrieve the latest temperature data JSON
+ */
 function getLatestTempData() {
 	
 	var request = new XMLHttpRequest;
@@ -41,17 +40,40 @@ function getLatestTempData() {
 
 /**
  * Add a probe
-	*/
+ */
 function addProbe(probeId) {
 
 	console.log("adding probe " + probeId);
 
-	var canvas = document.createElement("canvas");
-	canvas.id = "canvas-" + probeId;
-	canvas.width = window.innerWidth - 24;
-	canvas.style = "margin: 8px";
-	document.body.appendChild(canvas);
-	window.g_canvases[probeId] = canvas;
+	var color = "#00FF00";
+	try {
+		color = window.g_settings[probeId].color;
+	} catch(e) {
+		console.log("no color for " + probeId + " (exception: " + e + ")");
+	}
+
+	var tempSeries = new TimeSeries();
+	window.g_smoothie.addTimeSeries(tempSeries, {lineWidth:2,strokeStyle:color});
+	window.g_tempSeries[probeId] = tempSeries;
+}
+
+/**
+ * Main entry point
+ */
+function tempsStart() {
+
+	// add canvas objects for well known probes // TODO: do this on the fly
+	getLatestTempData();
+
+	// create graph canvas and smoothie charts
+	//
+
+	// update canvas width and height relative to parent
+	var div = document.getElementById("chart_main");
+	var canvas = document.getElementById("chart_canvas");
+	var parentStyle = window.getComputedStyle(div, null);
+	canvas.width = parseFloat(parentStyle.width);
+	canvas.height = parseFloat(parentStyle.height);
 
 	// millis per pixel will be (1000 * 60 * 10) / width -- entire width will give us 10 minutes
 	var mpp = 100;
@@ -59,7 +81,7 @@ function addProbe(probeId) {
 		mpp = (1000 * 60 * 30) / canvas.width;
 	}
 
-	var smoothie = new SmoothieChart(
+	window.g_smoothie = new SmoothieChart(
 		{
 			millisPerPixel: mpp, 
 			interpolation:"linear", 
@@ -71,52 +93,9 @@ function addProbe(probeId) {
 				strokeStyle: 'rgba(119,119,119,0.5)'
 			}
 		});
-	smoothie.streamTo(canvas, 1000);
+	window.g_smoothie.streamTo(canvas, 1000);
 
-	var color = "#00FF00";
-	try {
-		color = window.g_settings[probeId].color;
-	} catch(e) {
-		console.log("no color for " + probeId + " (exception: " + e + ")");
-	}
-
-	var tempSeries = new TimeSeries();
-	smoothie.addTimeSeries(tempSeries, {lineWidth:2,strokeStyle:color});
-	window.g_tempSeries[probeId] = tempSeries;
-
-	window.g_smoothieCharts[probeId] = smoothie;
-}
-
-/**
- * Resize canvases so they equally fill the window
-	*/
-function resizeCanvases() {
-	var newHeight;
-	var numProbes = Object.keys(window.g_canvases).length;
-	if (numProbes > 0) {
-		newHeight = (window.innerHeight - (numProbes * 8 * 2)) / numProbes;
-	}
-
-	/*
-	console.log("resizing canvases. window height: " + window.innerHeight);
-	console.log("    num probes: " + numProbes);
-	console.log("    height:     " + newHeight);
-	*/
-
-	for (var probeId in window.g_canvases) {
-		var canvas = window.g_canvases[probeId];
-		canvas.height = "" + newHeight;
-	}
-}
-
-/**
-	* Main entry point
-	*/
-function tempsStart() {
-
-	// add canvas objects for well known probes // TODO: do this on the fly
-	getLatestTempData();
-
+	// set up recurring function to update charts
 	setInterval(function() {
 
 		for (var probeId in window.g_lastTempData) {
@@ -124,10 +103,9 @@ function tempsStart() {
 			var probeInfo = window.g_lastTempData[probeId];
 
 			// add probe if it doesn't exist...
-			if (window.g_canvases[probeId]) {
+			if (window.g_tempSeries[probeId]) {
 			} else {
 				addProbe(probeId);
-				resizeCanvases();
 			}
 
 			var tempData = window.g_lastTempData[probeId];

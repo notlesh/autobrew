@@ -1,7 +1,11 @@
-<html>
+<!DOCTYPE html>
+<html style="height: 100%">
+	<meta charset="utf-8" />
 	<head>
+		<link rel="stylesheet" type="text/css" href="styles.css">
 		<script type="text/javascript" src="smoothie.js"></script>
 		<script type="text/javascript" src="temps.js"></script>
+		<script type="text/javascript" src="rpc.js"></script>
 		<script>
 			// set the window onload function to kick things off
 			window.onload = function() {
@@ -12,7 +16,26 @@
 		<title>Autobrew Temperatures</title>
 	</head>
 
-	<body bgcolor="#222222" style="overflow: hidden">
-		<!-- <canvas id="mycanvas" width="400" height="200" style="width: 100%;"></canvas> -->
+	<body bgcolor="#222222" style="overflow: hidden; height: 100%; padding: 0px; margin: 0px;">
+
+		<div id="root" style="position: relative; width: 100%; height: 100%">
+
+			<div id="top_row" style="position:absolute; top: 0px; right: 0px; bottom: 100px; left: 0px;">
+				<div id="right_column" style="position:absolute; top: 0px; right: 0px; bottom: 0px; width: 100px"></div>
+				<div id="chart_main" style="position: absolute; top: 8px; right: 100px; bottom: 0px; left: 8px;">
+					<canvas id="chart_canvas" style="width: 100%; height: 100%;"></canvas>
+				</div>
+			</div>
+
+			<div id="bottom_row" style="position:absolute; bottom: 0px; left: 0px; right: 0px; height: 100px">
+				<div id="p1_on_buttom" class="button" onclick="rpcRequest('p1_on');">Pump 1 On</div>
+				<div id="p1_off_buttom" class="button" onclick="rpcRequest('p1_off');">Pump 1 Off</div>
+				<div id="p2_on_buttom" class="button" onclick="rpcRequest('p2_on');">Pump 2 On</div>
+				<div id="p2_off_buttom" class="button" onclick="rpcRequest('p2_off');">Pump 2 Off</div>
+				<div id="valve_on_buttom" class="button" onclick="rpcRequest('valve_on');">Valve On</div>
+				<div id="valve_off_buttom" class="button" onclick="rpcRequest('valve_off');">Valve Off</div>
+			</div>
+
+		</div>
 	</body>
 </html>

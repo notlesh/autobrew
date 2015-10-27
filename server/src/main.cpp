@@ -155,6 +155,24 @@ void handleRequest( FCGX_Request& request ) {
 		jsonResponse = "{ \"response\": \"All systems go\" }";
 		responseCode = 200;
 
+	} else if (handlerName == "p1_on") {
+		system("gpio export 18 out; gpio -g write 18 1");
+
+	} else if (handlerName == "p1_off") {
+		system("gpio export 18 out; gpio -g write 18 0");
+
+	} else if (handlerName == "p2_on") {
+		system("gpio export 27 out; gpio -g write 27 1");
+
+	} else if (handlerName == "p2_off") {
+		system("gpio export 27 out; gpio -g write 27 0");
+
+	} else if (handlerName == "valve_on") {
+		system("gpio export 22 out; gpio -g write 22 1");
+
+	} else if (handlerName == "valve_off") {
+		system("gpio export 22 out; gpio -g write 22 0");
+
 	} else {
 
 		jsonResponse = "{ \"response\": \"Unrecognized Handler\" }";
