@@ -10,6 +10,13 @@
 #include <roller/core/log.h>
 #include <roller/core/util.h>
 
+#include "device_manager.h"
+
+#include "raspi_gpio_switch.h"
+#include "owfs_sensors.h"
+
+#include "temperature_manager.h"
+#include "current_limiter.h"
 #include "pid.h"
 #include "server_controller.h"
 #include "dummy_controller.h"
@@ -28,17 +35,22 @@ void handleSignal( i32 sig ) {
 	Log::i( "sig %d caught, flagging app to stop running", sig );
 	g_appRunning = false;
 	FCGX_ShutdownPending();
+
+	// hack to make fcgx actually die
+	system("curl http://localhost/ab/ping &");
 }
 
 // handleRequest
-void handleRequest( FCGX_Request& request );
+void handleRequest( FCGX_Request& request, CurrentLimiter& currentLimiter );
 
-// test PID controller
-void handleStartPID();
-void handleStopPID();
+// test Dummy controller
+void handleStartDummy();
+void handleStopDummy();
 std::shared_ptr<DummyController> s_controller;
 
-// mainNULL
+void configCurrentLimiter(CurrentLimiter& currentLimiter);
+
+// main
 i32 main( i32 argc, char** argv ) {
 
 	printf( "ab server starting\n" );
@@ -53,6 +65,20 @@ i32 main( i32 argc, char** argv ) {
 	signal( SIGTERM, handleSignal );
 
 	Log::setLogLevelMode( LOG_LEVEL_MODE_UNIX_TERMINAL );
+
+	// initialize devman
+	auto raspiGPIOManager = std::make_shared<RaspiGPIOSwitchManager>();
+	StringId raspiSwitchManagerID = DeviceManager::registerSwitchManager( raspiGPIOManager );
+
+	// initialize CurrentLimiter
+	CurrentLimiter currentLimiter(700, 35000); // base is 0.7 amps, total allowed 35 amps
+	configCurrentLimiter(currentLimiter);
+
+	// initialize temperature manager
+	auto owfsManager = std::make_shared<OWFSHardwareManager>( "--usb all" );
+	StringId owfsManagerID = DeviceManager::registerTemperatureSensorManager( owfsManager );
+	TemperatureManager temperatureManager;
+	temperatureManager.run();
 
 	// initialize fast cgi
 	printf( "initializing fcgx\n" );
@@ -75,6 +101,10 @@ i32 main( i32 argc, char** argv ) {
 		fprintf( stderr, "FCGX_InitRequest() failed: %d\n", result );
 	}
 
+	// TODO: hack to change server socket permissions
+	system("chown root:www-data /var/run/ab.socket &");
+	system("chmod g+w /var/run/ab.socket &");
+
 	while ( g_appRunning ) {
 
 		result = FCGX_Accept_r( &request );
@@ -85,7 +115,7 @@ i32 main( i32 argc, char** argv ) {
 
 		try {
 
-			handleRequest( request);
+			handleRequest(request, currentLimiter);
 
 		} catch( exception& e ) {
 			Log::w( "Caught exception while trying to handle request (ignoring): %s", e.what());
@@ -98,7 +128,7 @@ i32 main( i32 argc, char** argv ) {
 }
 
 // handleRequest
-void handleRequest( FCGX_Request& request ) {
+void handleRequest( FCGX_Request& request, CurrentLimiter& currentLimiter ) {
 
 	std::string scriptName = FCGX_GetParam("SCRIPT_NAME", request.envp);
 	std::string pathInfo = FCGX_GetParam("PATH_INFO", request.envp);
@@ -118,34 +148,34 @@ void handleRequest( FCGX_Request& request ) {
 
 	std::string jsonResponse = "{}";
 	i32 responseCode = 200;
-	if (handlerName == "start_pid") {
+	if (handlerName == "start_dummy") {
 
 		try {
-			handleStartPID();
+			handleStartDummy();
 
 			jsonResponse = "{ \"response\": \"OK\" }";
 			responseCode = 200;
 
 		} catch ( exception& e ) {
-			Log::w( "caught exception in handleStartPID: %s", e.what() );
+			Log::w( "caught exception in handleStartDummy: %s", e.what() );
 
-			jsonResponse = roller::makeString( "{ \"response\": \"Failed to start PID controller\", \"reason\": \"%s\"}",
+			jsonResponse = roller::makeString( "{ \"response\": \"Failed to start Dummy controller\", \"reason\": \"%s\"}",
 					e.what());
 			responseCode = 500;
 		}
 
-	} else if (handlerName == "stop_pid") {
+	} else if (handlerName == "stop_dummy") {
 
 		try {
-			handleStopPID();
+			handleStopDummy();
 
 			jsonResponse = "{ \"response\": \"OK\" }";
 			responseCode = 200;
 
 		} catch ( exception& e ) {
-			Log::w( "caught exception in handleStopPID: %s", e.what() );
+			Log::w( "caught exception in handleStopDummy: %s", e.what() );
 
-			jsonResponse = roller::makeString( "{ \"response\": \"Failed to stop PID controller\", \"reason\": \"%s\"}",
+			jsonResponse = roller::makeString( "{ \"response\": \"Failed to stop Dummy controller\", \"reason\": \"%s\"}",
 					e.what());
 			responseCode = 500;
 		}
@@ -155,23 +185,43 @@ void handleRequest( FCGX_Request& request ) {
 		jsonResponse = "{ \"response\": \"All systems go\" }";
 		responseCode = 200;
 
+	// TODO: use wiring pi library here and track pin state?
 	} else if (handlerName == "p1_on") {
-		system("gpio export 18 out; gpio -g write 18 1");
+		currentLimiter.enablePin(18);
 
 	} else if (handlerName == "p1_off") {
-		system("gpio export 18 out; gpio -g write 18 0");
+		currentLimiter.disablePin(18);
 
 	} else if (handlerName == "p2_on") {
-		system("gpio export 27 out; gpio -g write 27 1");
+		currentLimiter.enablePin(27);
 
 	} else if (handlerName == "p2_off") {
-		system("gpio export 27 out; gpio -g write 27 0");
+		currentLimiter.disablePin(27);
 
 	} else if (handlerName == "valve_on") {
-		system("gpio export 22 out; gpio -g write 22 1");
+		// system("gpio export 22 out; gpio -g write 22 1");
+		currentLimiter.enablePin(22);
+		/*
+		currentLimiter.enablePin(24); // HLT safety
+		currentLimiter.enablePin(10); // BK safety
+
+		// BK
+		currentLimiter.enablePin(17); // BK 
+		CurrentLimiter::PinConfiguration config = currentLimiter.getPinConfiguration(17);
+		config._pwmLoad = 1.0;
+		currentLimiter.updatePinConfiguration(config);
+
+		// HLT
+		currentLimiter.enablePin(4); // BK 
+		config = currentLimiter.getPinConfiguration(4);
+		config._pwmLoad = 1.0;
+		currentLimiter.updatePinConfiguration(config);
+		*/
+
 
 	} else if (handlerName == "valve_off") {
-		system("gpio export 22 out; gpio -g write 22 0");
+		// system("gpio export 22 out; gpio -g write 22 0");
+		currentLimiter.disablePin(22);
 
 	} else {
 
@@ -210,7 +260,7 @@ void handleRequest( FCGX_Request& request ) {
 	FCGX_Finish_r( &request );
 }
 
-void handleStartPID() {
+void handleStartDummy() {
 
 	if ( s_controller ) {
 		throw RollerException( "Can't start dummy controller; already running" );
@@ -220,7 +270,7 @@ void handleStartPID() {
 	s_controller->start();
 }
 
-void handleStopPID() {
+void handleStopDummy() {
 
 	if ( ! s_controller ) {
 		throw RollerException( "Can't stop dummy controller; none running" );
@@ -229,4 +279,94 @@ void handleStopPID() {
 	s_controller->stop();
 	s_controller->join();
 	s_controller.reset();
+}
+
+void configCurrentLimiter(CurrentLimiter& currentLimiter) {
+
+	// TODO: pull this info from config file (etc.)
+
+	// pump 1
+	CurrentLimiter::PinConfiguration config;
+	config._name = "Pump 1";
+	config._pinNumber = 18;
+	config._milliAmps = 1400;
+	config._critical = true;
+	config._pwm = false;
+	config._pwmFrequency = 0;
+	config._pwmLoad = 0.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
+
+	// pump 2
+	config._name = "Pump 2";
+	config._pinNumber = 27;
+	config._milliAmps = 1400;
+	config._critical = true;
+	config._pwm = false;
+	config._pwmFrequency = 0;
+	config._pwmLoad = 0.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
+
+	// valve 1
+	config._name = "Valve 1";
+	config._pinNumber = 22;
+	config._milliAmps = 200;
+	config._critical = true;
+	config._pwm = false;
+	config._pwmFrequency = 0;
+	config._pwmLoad = 0.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
+
+	// BK element safety
+	config._name = "BK Element Safety";
+	config._pinNumber = 10;
+	config._milliAmps = 34;
+	config._critical = true;
+	config._pwm = false;
+	config._pwmFrequency = 0;
+	config._pwmLoad = 0.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
+
+	// HLT element safety
+	config._name = "HLT Element Safety";
+	config._pinNumber = 24;
+	config._milliAmps = 34;
+	config._critical = true;
+	config._pwm = false;
+	config._pwmFrequency = 0;
+	config._pwmLoad = 0.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
+
+	// BK element 
+	config._name = "BK Element";
+	config._pinNumber = 17;
+	config._milliAmps = 23000;
+	config._critical = false;
+	config._pwm = true;
+	config._pwmFrequency = 20;
+	config._pwmLoad = 1.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
+
+	// HLT element 
+	config._name = "HLT Element";
+	config._pinNumber = 4;
+	config._milliAmps = 23000;
+	config._critical = false;
+	config._pwm = true;
+	config._pwmFrequency = 20;
+	config._pwmLoad = 1.0f;
+	currentLimiter.addPinConfiguration(
+			config,
+			DeviceManager::getSwitch(RaspiGPIOSwitchManager::s_id, StringId::format("%d", config._pinNumber)));
 }

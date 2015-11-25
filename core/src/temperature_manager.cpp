@@ -272,7 +272,7 @@ void TemperatureManager::updateTemperatures() {
 		try {
 			temp = sensor->getTemperature( time );
 
-			Log::i( "%lld: %s = %d", time, sensorId.getString().c_str(), temp );
+			// Log::i( "%lld: %s = %d", time, sensorId.getString().c_str(), temp );
 			
 			_dataLock.lock();
 			stats._numSuccess++;

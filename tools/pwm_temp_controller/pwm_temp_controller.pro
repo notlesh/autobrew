@@ -1,5 +1,5 @@
 CONFIG += debug
-QMAKE_CXXFLAGS += -std=c++0x
+QMAKE_CXXFLAGS += -std=c++11
 QT -= core gui
 
 # this will force the makefile to use colorgcc, a wrapper around gcc that colorizes content.
