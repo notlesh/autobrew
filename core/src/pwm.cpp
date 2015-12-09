@@ -18,7 +18,7 @@ PWMController::PWMController( shared_ptr<Switch> ioSwitch ) :
 				_periodUS(10000), // 100 hz
 				_paused(true),
 				_running(true),
-				_history(10) {
+				_history(32) {
 	_thread.run();
 }
 
@@ -92,21 +92,17 @@ void PWMController::doStart() {
 			// add last state to our history
 			_history.add( (on ? 1 : 0) ); // add a 1 if we're on or a 0 if off
 			ui32 sum = _history.sum();
+			f32 avg = ((f32)sum / ((f32)_history.size()));
+			f32 diff = _load - avg;
 
-			if ( ((f32)sum / ((f32)_history.size())) > _load ) {
-				// if ( on ) {
-					// Log::f( "PWM: off" );
-				// }
-				// we've been on too much, turn off
-				_ioSwitch->setState( false );
-				on = false;
-			} else {
-				// if ( ! on ) {
-					// Log::f( "PWM: on" );
-				// }
+			if ( diff > 0.0001f ) {
 				// haven't been on enough, turn on
 				_ioSwitch->setState( true );
 				on = true;
+			} else {
+				// we've been on too much, turn off
+				_ioSwitch->setState( false );
+				on = false;
 			}
 		}
 

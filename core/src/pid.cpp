@@ -84,3 +84,13 @@ void PID::setErrorAccumulationCap( f32 errorAccumulationCap ) {
 f32 PID::getErrorAccumulationCap() const {
 	return _errorAccumulationCap;
 }
+
+// setSetpoint
+void PID::setSetpoint( f32 setpoint ) {
+	_setpoint = setpoint;
+}
+
+f32 PID::getSetpoint() const {
+	return _setpoint;
+}
+

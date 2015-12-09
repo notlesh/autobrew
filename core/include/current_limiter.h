@@ -131,6 +131,7 @@ private:
 		std::shared_ptr<PWMController> _pwmController; // only if pwm. includes dedicated thread
 	};
 
+	Mutex _lock;
 	std::map<uint32_t, PinConfiguration> _pinConfigurations;
 	std::map<uint32_t, PinState> _pinStates;
 	uint32_t _baseMilliAmps = 0;

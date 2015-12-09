@@ -29,6 +29,12 @@ TemperatureManager::TemperatureManager() :
 	_lastUpdate = getTime() + 3000;
 }
 
+TemperatureManager::~TemperatureManager() {
+	Log::f("TemperatureManager::~TemperatureManager()");
+	Log::f("  joining temp manager thread");
+	join();
+}
+
 // stop
 void TemperatureManager::stop() {
 	_running = false;
@@ -143,9 +149,6 @@ void TemperatureManager::removeNewProbeListener( const Key& key ) {
 void TemperatureManager::doRun() {
 
 	_running = true;
-
-	// XXX: hack
-	usleep( 10000000 );
 
 	while ( _running ) {
 

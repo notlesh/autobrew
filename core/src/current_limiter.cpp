@@ -7,24 +7,36 @@ CurrentLimiter::CurrentLimiter(uint32_t baseMilliAmps, uint32_t maxMilliAmps)
 }
 
 CurrentLimiter::~CurrentLimiter() {
+	Log::w("CurrentLimiter::~CurrentLimiter()");
+
+	MutexLocker locker(_lock);
 
 	// turn off all pins and PWM controllers
 	for (const auto& entry : _pinConfigurations) {
-		const PinConfiguration& config = entry.second;
-		PinState& state = _pinStates[config._pinNumber];
 
-		// if pwm, turn controller off and free it
-		if (config._pwm) {
-			state._pwmController->stop();
-			state._pwmController->join();
-			state._pwmController.reset();
+		try {
+			const PinConfiguration& config = entry.second;
+			PinState& state = _pinStates[config._pinNumber];
+
+			// if pwm, turn controller off and free it
+			if (config._pwm) {
+				state._pwmController->stop();
+				state._pwmController->join();
+				state._pwmController.reset();
+			}
+
+			Log::w("CurrentLimiter::~CurrentLimiter: disabling pin %d", config._pinNumber);
+			state._ioSwitch->setState(false);
+		} catch (const exception& e) {
+			Log::w("Caught exception while destructing CurrentLimiter, ignoring: %s", e.what());
+		} catch (...) {
+			Log::w("Caught unknown exception while destructing CurrentLimiter, ignoring");
 		}
-
-		state._ioSwitch->setState(false);
 	}
 }
 
 void CurrentLimiter::addPinConfiguration(const PinConfiguration& config, std::shared_ptr<Switch> gpio) {
+	MutexLocker locker(_lock);
 
 	uint32_t pin = config._pinNumber;
 	
@@ -54,6 +66,7 @@ void CurrentLimiter::addPinConfiguration(const PinConfiguration& config, std::sh
 }
 
 CurrentLimiter::PinConfiguration CurrentLimiter::getPinConfiguration(uint32_t pin) {
+	MutexLocker locker(_lock);
 
 	auto itr = _pinConfigurations.find(pin);
 	if (itr == _pinConfigurations.end()) {
@@ -64,6 +77,7 @@ CurrentLimiter::PinConfiguration CurrentLimiter::getPinConfiguration(uint32_t pi
 }
 
 void CurrentLimiter::updatePinConfiguration(const CurrentLimiter::PinConfiguration& config) {
+	MutexLocker locker(_lock);
 
 	uint32_t pin = config._pinNumber;
 
@@ -88,6 +102,7 @@ void CurrentLimiter::updatePinConfiguration(const CurrentLimiter::PinConfigurati
 }
 
 void CurrentLimiter::enablePin(uint32_t pin) {
+	MutexLocker locker(_lock);
 
 	auto itr = _pinConfigurations.find(pin);
 	if (itr == _pinConfigurations.end()) {
@@ -96,13 +111,14 @@ void CurrentLimiter::enablePin(uint32_t pin) {
 
 	PinState& state = _pinStates[pin];
 
-	if (! state._enabled) {
+	if (! state._desiredState) {
 		state._desiredState = true;
 		evaluateConfiguration();
 	}
 }
 
 void CurrentLimiter::disablePin(uint32_t pin) {
+	MutexLocker locker(_lock);
 
 	auto itr = _pinConfigurations.find(pin);
 	if (itr == _pinConfigurations.end()) {
@@ -111,7 +127,7 @@ void CurrentLimiter::disablePin(uint32_t pin) {
 
 	PinState& state = _pinStates[pin];
 
-	if (state._enabled) {
+	if (state._desiredState) {
 		state._desiredState = false;
 		evaluateConfiguration();
 	}
@@ -188,6 +204,8 @@ void CurrentLimiter::evaluateConfiguration() {
 			} else {
 
 				// pin wasn't desired anyway, turn off
+				state._overriden = false;
+				state._enabled = false;
 				state._ioSwitch->setState(false);
 			}
 		}
@@ -204,7 +222,6 @@ void CurrentLimiter::evaluateConfiguration() {
 	double totalDesiredMilliAmps = 0.0f;
 	for (const auto& entry : _pinConfigurations) {
 		const PinConfiguration& config = entry.second;
-		PinState& state = _pinStates[config._pinNumber];
 
 		if (! config._critical && config._pwm) {
 			double loadMA = ((float)config._milliAmps * config._pwmLoad);
@@ -250,7 +267,7 @@ void CurrentLimiter::evaluateConfiguration() {
 							(float)load);
 					
 					PinState& state = _pinStates[config._pinNumber];
-					state._pwmLoad = availableRatio;
+					state._pwmLoad = availableRatio * config._pwmLoad;
 				}
 			}
 			

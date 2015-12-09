@@ -78,6 +78,11 @@ public:
 	TemperatureManager();
 
 	/**
+	 * Destructor. Implicitly calls join()
+	 */
+	~TemperatureManager();
+
+	/**
 	 * Stop the thread
 	 */
 	void stop();

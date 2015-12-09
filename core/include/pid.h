@@ -46,6 +46,20 @@ public:
 	 */
 	f32 getErrorAccumulationCap() const;
 
+	/**
+	 * Sets the Setpoint
+	 *
+	 * @param setpoint is the new value for Setpoint
+	 */
+	void setSetpoint( f32 setpoint );
+	
+	/**
+	 * Returns Setpoint
+	 *
+	 * @return Setpoint
+	 */
+	f32 getSetpoint() const;
+
 private:
 
 	// config
