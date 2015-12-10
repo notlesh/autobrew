@@ -249,6 +249,9 @@ void CurrentLimiter::evaluateConfiguration() {
 				if (! config._critical && config._pwm) {
 					PinState& state = _pinStates[config._pinNumber];
 					state._pwmLoad = config._pwmLoad;
+					Log::f("    %s gets what he wants: %.3f",
+							config._name.c_str(),
+							(float)state._pwmLoad);
 				}
 			}
 		} else {
@@ -271,6 +274,15 @@ void CurrentLimiter::evaluateConfiguration() {
 				}
 			}
 			
+		}
+	} else {
+
+		// turn all off
+		for (auto& entry : _pinStates) {
+			PinState& state = entry.second;
+			if (state._pwmLoad > 0.0f) {
+				state._pwmLoad = 0.0f;
+			}
 		}
 	}
 

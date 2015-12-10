@@ -189,11 +189,11 @@ void handleRequest( FCGX_Request& request ) {
 			params[paramParts[0]] = paramParts[1];
 			Log::f("request param: %s = %s", paramParts[0].c_str(), paramParts[1].c_str());
 		}
-		handlerName = requestUri.substr(4, (paramsStart - 4));
 	} else {
 		baseUri = requestUri;
-		handlerName = requestUri.substr(4, (requestUri.size() - 4));
 	}
+
+	handlerName = params["cmd"];
 
 	
 	// get last part of URI
@@ -298,12 +298,24 @@ void handleRequest( FCGX_Request& request ) {
 					pinConfiguration._pwmLoad = load;
 					g_currentLimiter.updatePinConfiguration(pinConfiguration);
 					g_currentLimiter.enablePin(10);
+					g_bkEnabled = false;
 				}
 			} else {
 				throw RollerException("illegal type parameter (%s) for configure_bk", params["type"].c_str());
 			}
 		} else {
+
+			Log::i("Turning off BK");
+
+			// set pwm load to 0
+			CurrentLimiter::PinConfiguration pinConfiguration = g_currentLimiter.getPinConfiguration(17);
+			pinConfiguration._pwmLoad = 0.0f;
+			g_currentLimiter.updatePinConfiguration(pinConfiguration);
+
+			// disable safety
 			g_currentLimiter.disablePin(10);
+
+			// flag bk pid to stop
 			g_bkEnabled = false;
 		}
 	} else if (handlerName == "configure_hlt") {
@@ -330,12 +342,23 @@ void handleRequest( FCGX_Request& request ) {
 					pinConfiguration._pwmLoad = load;
 					g_currentLimiter.updatePinConfiguration(pinConfiguration);
 					g_currentLimiter.enablePin(24);
+					g_hltEnabled = false;
 				}
 			} else {
 				throw RollerException("illegal type parameter (%s) for configure_hlt", params["type"].c_str());
 			}
 		} else {
+			Log::i("Turning off HLT");
+
+			// set pwm load to 0
+			CurrentLimiter::PinConfiguration pinConfiguration = g_currentLimiter.getPinConfiguration(4);
+			pinConfiguration._pwmLoad = 0.0f;
+			g_currentLimiter.updatePinConfiguration(pinConfiguration);
+
+			// disable safety
 			g_currentLimiter.disablePin(24);
+
+			// flag hlt pid to stop
 			g_hltEnabled = false;
 		}
 
@@ -532,6 +555,7 @@ void pidLoop() {
 			g_currentLimiter.updatePinConfiguration(pinConfiguration);
 
 		} else if (hltSetup) {
+			Log::i("killing HLT pid...");
 			hltPID.reset();
 			hltSetup = false;
 		}
@@ -563,6 +587,7 @@ void pidLoop() {
 			g_currentLimiter.updatePinConfiguration(pinConfiguration);
 
 		} else if (bkSetup) {
+			Log::i("killing BK pid...");
 			bkPID.reset();
 			bkSetup = false;
 		}
