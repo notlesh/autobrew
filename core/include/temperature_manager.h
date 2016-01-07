@@ -15,9 +15,6 @@
 #include <roller/core/mutex.h>
 #include <roller/core/indexed_container.h>
 
-#define NUM_TEMP_SAMPLES 131072
-#define SAMPLE_FILL_FREQUENCY_MS 1000
-
 using namespace roller;
 using namespace devman;
 using std::map;
@@ -115,25 +112,9 @@ public:
 	const ProbeStats& getProbeStats( const StringId& sensorId ) const;
 
 	/**
-	 * Returns a raw pointer to a temperature sample buffer. This should be treated as read only. If
-	 * no buffer is available for the given sensor, nullptr will be returned.
-	 */
-	f64* getBuffer( const StringId& sensorId );
-
-	/**
 	 * Returns the sample rate (the rate at which the stored buffers are filled)
 	 */
 	i32 getSampleRate();
-
-	/** 
-	 * Returns the time of the first sample taken.
-	 */
-	i64 getFirstBufferSampleTime();
-
-	/** 
-	 * Returns the time of the most recent sample taken.
-	 */
-	i64 getMostRecentBufferSampleTime();
 
 	/**
 	 * Add a ProbeStats listener. This is threadsafe.
@@ -186,11 +167,6 @@ private:
 	void dumpTempData();
 
 	/**
-	 * Fill sample values
-	 */
-	void fillSamples( i32 index );
-
-	/**
 	 * Helper to fire probe stats changed events
 	 */
 	void fireProbeStatsChangedEvent( const ProbeStats& before, const ProbeStats& after );
@@ -205,19 +181,11 @@ private:
 	set<pair<StringId, StringId>> _knownProbes;
 	map<StringId, ProbeStats> _probeStats;
 
-	map<StringId, i32> _readings;
-	map<StringId, i64> _errorCounts;
-	map<StringId, i64> _successCounts;
-	map<StringId, unique_ptr<f64[]>> _buffers;
-
 	i32 _updateFrequency;
 	i64 _lastUpdate;
 
 	i32 _updateProbeListFrequency;
 	i64 _lastUpdateProbeList;
-
-	i64 _firstSampleTime;
-	i64 _lastSampleFill;
 
 	Mutex _eventLock;
 	IndexedContainer<ProbeStatsListener> _probeStatsListeners;

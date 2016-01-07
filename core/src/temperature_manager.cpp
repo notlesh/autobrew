@@ -23,8 +23,6 @@ TemperatureManager::TemperatureManager() :
 				_lastUpdate(0),
 				_updateProbeListFrequency(15000),
 				_lastUpdateProbeList(0),
-				_firstSampleTime(-1),
-				_lastSampleFill(-1),
 				_eventLock(true) {
 	_lastUpdate = getTime() + 3000;
 }
@@ -77,42 +75,6 @@ const ProbeStats& TemperatureManager::getProbeStats( const StringId& sensorId ) 
 		_dataLock.unlock();
 		throw RollerException( "No such probe stats: %s", sensorId.getString().c_str() );
 	}
-}
-
-// getBuffer
-f64* TemperatureManager::getBuffer( const StringId& sensorId ) {
-
-	f64* bufferAddr = nullptr;
-	bool present = false;
-
-	_dataLock.lock();
-	auto itr = _buffers.find( sensorId );
-	if ( itr != _buffers.end() ) {
-		bufferAddr = itr->second.get();
-		present = true;
-	}
-	_dataLock.unlock();
-
-	if ( ! present ) {
-		throw RollerException( "No such temperature: %s", sensorId.getString().c_str() );
-	} else {
-		return bufferAddr;
-	}
-}
-
-// getSampleRate
-i32 TemperatureManager::getSampleRate() {
-	return SAMPLE_FILL_FREQUENCY_MS;
-}
-
-// getFirstBufferSampleTime
-i64 TemperatureManager::getFirstBufferSampleTime() {
-	return _firstSampleTime;
-}
-
-// getMostRecentBufferSampleTime
-i64 TemperatureManager::getMostRecentBufferSampleTime() {
-	return _lastSampleFill;
 }
 
 // addStatsListener
@@ -183,13 +145,6 @@ void TemperatureManager::doRun() {
 		_lastUpdate = now;
 
 		dumpTempData();
-
-		while ( (_firstSampleTime > 0) && now - _lastSampleFill > SAMPLE_FILL_FREQUENCY_MS ) {
-			// Log::i( "now: %ld, last: %ld, first: %ld, sample rate: %d", now, _lastSampleFill, _firstSampleTime, SAMPLE_FILL_FREQUENCY_MS );
-			fillSamples( (_lastSampleFill - _firstSampleTime) / SAMPLE_FILL_FREQUENCY_MS );
-			_lastSampleFill += SAMPLE_FILL_FREQUENCY_MS;
-		}
-
 	}
 }
 
@@ -216,16 +171,8 @@ void TemperatureManager::updateProbeList() {
 
 		StringId sensorId = entry.second;
 
-		auto itr = _buffers.find( sensorId );
-		if ( itr == _buffers.end() ) {
-			unique_ptr<f64[]> buffer( new f64[NUM_TEMP_SAMPLES] );
-			buffer[0] = ABS_ZERO_CELCIUS;
-			memfill( buffer.get(), NUM_TEMP_SAMPLES * sizeof(f64), sizeof(f64) );
-			_buffers[sensorId] = std::move( buffer );
-		}
-
 		// TODO: check stats (from database, etc.)
-		ProbeStats& stats = _probeStats[sensorId] = {
+		_probeStats[sensorId] = {
 				sensorId,
 				-1,
 				now,
@@ -246,10 +193,6 @@ void TemperatureManager::updateProbeList() {
 // updateTemperatures
 void TemperatureManager::updateTemperatures() {
 	// Log::i( "TemperatureManager::updateTemperatures()" );
-
-	if ( _firstSampleTime < 0 ) {
-		_firstSampleTime = getTime();
-	}
 
 	for ( auto entry : _knownProbes ) {
 
@@ -313,14 +256,8 @@ void TemperatureManager::updateTemperatures() {
 
 		// TODO: review this
 		_dataLock.lock();
-		_readings[sensorId] = temp;
 		_dataLock.unlock();
 
-	}
-
-	if ( _lastSampleFill < 0 ) {
-		fillSamples( 0 );
-		_lastSampleFill = _firstSampleTime;
 	}
 }
 
@@ -394,37 +331,6 @@ void TemperatureManager::dumpTempData() {
 	jsonOut << "}\n";
 	
 	jsonOut.flush();
-}
-
-// fillSamples
-void TemperatureManager::fillSamples( i32 index ) {
-
-	if ( index >= NUM_TEMP_SAMPLES ) {
-		Log::w( "FIXME: We filled up temp sample buffer! Been brewing for a while?" );
-		Log::w( "       Index: %d, Buffer size: %d", index, NUM_TEMP_SAMPLES );
-		Log::w( "       Expect bad things to happen." );
-	}
-
-	for ( auto entry : _knownProbes ) {
-
-		StringId sensorId = entry.second;
-		
-		auto buffersItr = _buffers.find( sensorId );
-		auto readingsItr = _readings.find( sensorId );
-
-		if ( buffersItr == _buffers.end() ) {
-			Log::w( "FIXME: Can't fill probe temp buffer, buffer doesn't exist!" );
-			continue;
-		}
-
-		if ( readingsItr == _readings.end() ) {
-			// means no reading is available for this probe yet
-			continue;
-		}
-
-		_buffers[sensorId][index] = _readings[sensorId];
-
-	}
 }
 
 // fireProbeStatsChangedEvent
