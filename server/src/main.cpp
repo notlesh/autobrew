@@ -22,9 +22,16 @@
 #include "pid.h"
 #include "server_controller.h"
 #include "dummy_controller.h"
+#include "valve_controller.h"
 
 #define AB_SERVER_FASTCGI_SOCKET "/var/run/ab.socket"
 #define AB_SERVER_FASTCGI_BACKLOG 8
+
+// pin numbers
+// TODO: move elsewhere, organize better (config file?)
+#define AB_VALVE_PIN 22
+#define AB_FLOAT_PIN 14
+
 
 using namespace roller;
 namespace po = boost::program_options;
@@ -40,6 +47,10 @@ StringId g_hltTempProbeId = StringId::intern("28.3AA87D040000");
 StringId g_bkTempProbeId = StringId::intern("28.EE9B8B040000");
 
 CurrentLimiter g_currentLimiter(700, 35000); // base is 0.7 amps, total allowed 35 amps
+ValveController g_valveController(
+		g_currentLimiter,
+		AB_FLOAT_PIN,
+		AB_VALVE_PIN);
 
 // handleSignal
 void handleSignal( i32 sig ) {
@@ -95,6 +106,9 @@ i32 main( i32 argc, char** argv ) {
 		// start PID thread
 		Thread pidThread(pidLoop);
 		pidThread.run();
+
+		// start valve thread
+		g_valveController.start();
 
 		// initialize fast cgi
 		printf( "initializing fcgx\n" );
@@ -253,11 +267,13 @@ void handleRequest( FCGX_Request& request ) {
 		g_currentLimiter.disablePin(27);
 
 	} else if (handlerName == "valve_on") {
-		g_currentLimiter.enablePin(22);
+		g_valveController.setMode(ValveController::Mode::ON);
 
 	} else if (handlerName == "valve_off") {
-		// system("gpio export 22 out; gpio -g write 22 0");
-		g_currentLimiter.disablePin(22);
+		g_valveController.setMode(ValveController::Mode::OFF);
+
+	} else if (handlerName == "valve_float") {
+		g_valveController.setMode(ValveController::Mode::FLOAT);
 
 	} else if (handlerName == "test_hlt") {
 		g_currentLimiter.enablePin(24); // HLT safety
@@ -451,7 +467,7 @@ void configCurrentLimiter() {
 
 	// valve 1
 	config._name = "Valve 1";
-	config._pinNumber = 22;
+	config._pinNumber = AB_VALVE_PIN;
 	config._milliAmps = 200;
 	config._critical = true;
 	config._pwm = false;
