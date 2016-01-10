@@ -1,58 +1,27 @@
 <!DOCTYPE html>
-<html style="height: 100%">
-	<meta charset="utf-8" />
+<html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="styles.css">
-		<script type="text/javascript" src="smoothie.js"></script>
-		<script type="text/javascript" src="temps.js"></script>
-		<script type="text/javascript" src="rpc.js"></script>
-		<script>
-			// set the window onload function to kick things off
-			window.onload = function() {
-				tempsStart();
-			};
-		</script>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>Autobrew</title>
+		<link rel="stylesheet" href="webix.css" type="text/css" media="screen" charset="utf-8">
+		<link rel="stylesheet" href="app.css" type="text/css" media="screen" charset="utf-8">
 
-		<title>Autobrew Temperatures</title>
+		<script src="webix.js" type="text/javascript" charset="utf-8"></script>	
+		<script src="skin.js" type="text/javascript" charset="utf-8"></script>	
+		<script src="smoothie_webix.js" type="text/javascript" charset="utf-8"></script>
+		<script src="./app.js" type="text/javascript" charset="utf-8"></script>
+
+		<script src="smoothie.js" type="text/javascript" charset="utf-8"></script>	
 	</head>
+	<body>
 
-	<body bgcolor="#222222" style="overflow: hidden; height: 100%; padding: 0px; margin: 0px;">
+	<div id="app_area"></div>
 
-		<div id="root" style="position: relative; width: 100%; height: 100%">
+	<script type="text/javascript">
+		webix.ready(function(){
+			webix.ui(init());
+		});
+	</script>
 
-			<div id="top_row" style="position:absolute; top: 0px; right: 0px; bottom: 100px; left: 0px;">
-				<div id="right_column" style="position:absolute; top: 0px; right: 0px; bottom: 0px; width: 150px"></div>
-				<div id="chart_main" style="position: absolute; top: 8px; right: 150px; bottom: 0px; left: 8px;">
-					<canvas id="chart_canvas" style="width: 100%; height: 100%;"></canvas>
-				</div>
-			</div>
-
-			<div id="bottom_row" style="position:absolute; bottom: 0px; left: 0px; right: 0px; height: 100px">
-				<div id="p1_on_buttom" class="button" onclick="rpcRequest('p1_on');">Pump 1 On</div>
-				<div id="p1_off_buttom" class="button" onclick="rpcRequest('p1_off');">Pump 1 Off</div>
-				<div id="p2_on_buttom" class="button" onclick="rpcRequest('p2_on');">Pump 2 On</div>
-				<div id="p2_off_buttom" class="button" onclick="rpcRequest('p2_off');">Pump 2 Off</div>
-				<div id="valve_on_buttom" class="button" onclick="rpcRequest('valve_on');">Valve On</div>
-				<div id="valve_off_buttom" class="button" onclick="rpcRequest('valve_off');">Valve Off</div>
-				<div id="valve_float_buttom" class="button" onclick="rpcRequest('valve_float');">Valve Float</div>
-
-				<p class="scaleLabel">Scale:</p>
-
-				<select onchange="handleScaleChange(this.value);">
-				 <option value="1m">1 minute</option>
-				 <option value="5m">5 minutes</option>
-				 <option value="10m">10 minutes</option>
-				 <option value="30m" selected>30 minutes</option>
-				 <option value="1h">1 hour</option>
-				 <option value="2h">2 hours</option>
-				 <option value="4h">4 hours</option>
-				 <option value="8h">8 hours</option>
-				 <option value="1d">24 hours</option>
-				 <option value="1w">1 week</option>
-				</select>
-
-			</div>
-
-		</div>
 	</body>
 </html>

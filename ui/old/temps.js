@@ -4,26 +4,6 @@ var g_tempSeries = {};
 var g_numericText = {};
 var g_numericDisplays = {};
 
-var g_settings = {
-	"28.EE9B8B040000": {
-		"color": "#FF0000",
-		"name": "BK"
-	},
-	"28.3AA87D040000": {
-		"color": "#4CB6D9",
-		"name": "HLT"
-	},
-	"28.A1F07C040000": {
-		"color": "#5E5113",
-		"name": "MT"
-	},
-	"28.42AB7D040000": {
-		"color": "#00CC33",
-		"name": "Wort Return"
-	},
-
-};
-
 
 /**
  * Retrieve the latest temperature data JSON
