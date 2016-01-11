@@ -275,16 +275,6 @@ void handleRequest( FCGX_Request& request ) {
 	} else if (handlerName == "valve_float") {
 		g_valveController.setMode(ValveController::Mode::FLOAT);
 
-	} else if (handlerName == "test_hlt") {
-		g_currentLimiter.enablePin(24); // HLT safety
-		g_hltSetpoint = 45.0f;
-		g_hltEnabled = true;
-
-	} else if (handlerName == "test_bk") {
-		g_currentLimiter.enablePin(10); // HLT safety
-		g_bkSetpoint = 45.0f;
-		g_bkEnabled = true;
-
 	} else if (handlerName == "configure_bk") {
 
 		bool enabled = Serialization::toBool(params["enabled"]);
