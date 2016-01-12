@@ -115,10 +115,13 @@ function init() {
 				{rows:[
 					{view:"button", id:"button_hlt", label:"HLT Element", on: {
 						onItemClick: function() {
+							var pos = webix.html.offset($$("button_hlt").getNode());
 							webix.ui({
 								view: "elementPanel",
 								id: "hlt_config_window",
-								element: "HLT"
+								element: "HLT",
+								top: pos.y - 250,
+								left: pos.x - 150,
 							}).show();
 						}
 					}},
@@ -132,10 +135,13 @@ function init() {
 				{rows:[
 					{view:"button", id:"button_bk", label:"BK Element", on: {
 						onItemClick: function() {
+							var pos = webix.html.offset($$("button_bk").getNode());
 							webix.ui({
 								view: "elementPanel",
 								id: "bk_config_window",
-								element: "BK"
+								element: "BK",
+								top: pos.y - 250,
+								left: pos.x - 150,
 							}).show();
 						}
 					}},

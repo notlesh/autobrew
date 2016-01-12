@@ -1,8 +1,6 @@
 webix.protoUI({
 	name: "elementPanel",
 	defaults: {
-		top: 100,
-		left: 100,
 		modal: true,
 		borderless: true,
 		body: {
