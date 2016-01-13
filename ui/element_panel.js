@@ -121,12 +121,15 @@ webix.protoUI({
 
 		if (type == "off") {
 			webix.ajax(baseURL + "&enabled=false");
-		} else if (type == 1) {
-			webix.ajax(baseURL + "&enabled=true&type=pwm&load=" + settingValue);
-		} else {
+		} else if (type == "pwm") {
+			var load = (settingValue / 100);
+			webix.ajax(baseURL + "&enabled=true&type=pwm&load=" + load);
+		} else if (type == "pid") {
 			// convert to celcius
 			var celcius = (settingValue - 32) * 5 / 9;
 			webix.ajax(baseURL + "&enabled=true&type=pid&setpoint=" + celcius);
+		} else {
+			throw "Unrecognized element control type: " + type;
 		}
 
 		$$("config_form").getParentView().close();
