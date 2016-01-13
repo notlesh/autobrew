@@ -1,6 +1,11 @@
 webix.protoUI({
 	name: "elementPanel",
 	defaults: {
+		baseOptions: {
+			off: { displayValue: "Off", type: "off", },
+			pwm: { displayValue: "PWM", type: "pwm", defaultSetting: 0, },
+			pid: { displayValue: "PID", type: "pid", defaultSetting: 0, },
+		},
 		modal: true,
 		borderless: true,
 		body: {
@@ -8,51 +13,47 @@ webix.protoUI({
 			id: "config_form",
 			width: 300,
 			elements: [
-				{ view: "select", id: "config_type_select", label: "Type", value: 0, labelWidth: 60, options: [
-					{id: "off", value: "Off"},
-					{id: "pwm", value: "PWM"},
-					{id: "pid", value: "PID"},
-					{id: "mash_out_hold", value: "Mash Out Hold"},
-					{id: "sparge_hold", value: "Sparge Hold"},
-				],
+				{ view: "richselect", id: "config_type_select", label: "Type / Preset", labelWidth: 110, value: "off", options: [],
 				on: {
 					onChange: function(newValue, oldValue) {
 						$$("config_form").getParentView().$setType(newValue);
 					}
 				}},
-				{
-					view: "counter",
-					id: "config_counter",
-					label: " ",
-					labelWidth: 60,
-					value: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					on: {
-						onChange: function(newValue, oldValue) {
-							$$("config_slider").setValue(newValue);
+				{ view: "fieldset", label: "Setting", body: { rows: [
+					{
+						view: "counter",
+						id: "config_counter",
+						label: " ",
+						labelWidth: 0,
+						value: 0,
+						min: 0,
+						max: 100,
+						step: 1,
+						on: {
+							onChange: function(newValue, oldValue) {
+								$$("config_slider").setValue(newValue);
+							}
 						}
-					}
-				},
-				{ 
-					view: "slider",
-					id: "config_slider",
-					label: " ",
-					labelWidth: 60,
-					value: 0,
-					min: 0,
-					max: 100,
-					step: 1,
-					on: {
-						onChange: function(newValue, oldValue) {
-							$$("config_counter").setValue(newValue);
-						},
-						onSliderDrag: function() {
-							$$("config_counter").setValue(this.getValue());
-						},
-					}
-				},
+					},
+					{ 
+						view: "slider",
+						id: "config_slider",
+						label: " ",
+						labelWidth: 0,
+						value: 0,
+						min: 0,
+						max: 100,
+						step: 1,
+						on: {
+							onChange: function(newValue, oldValue) {
+								$$("config_counter").setValue(newValue);
+							},
+							onSliderDrag: function() {
+								$$("config_counter").setValue(this.getValue());
+							},
+						}
+					},
+				] }},
 				{ margin: 5, cols: [
 					{ view: "button", id: "config_submit", value: "Submit", type: "form", on: {
 						onItemClick: function() {
@@ -77,23 +78,50 @@ webix.protoUI({
 
 		// prime the layout
 		webix.delay(function() {
-			$$("config_counter").config.width = 400;
-			$$("config_counter").resize();
-			this.$setType("pid");
+
+			// merge presets with base typeOptions
+			var typeOptions = webix.copy(this.config.baseOptions);
+			webix.extend(typeOptions, this.config.presets);
+			this.config.typeOptions = typeOptions;
+
+			// webix expects options as array of objects
+			var options = [];
+			for (var key in typeOptions) {
+				if (typeOptions.hasOwnProperty(key)) {
+					var entry = typeOptions[key];
+					var newOption = {
+						id: key,
+						value: entry.displayValue,
+					};
+					options.push(newOption);
+				}
+			}
+
+			// build select options from combined set
+			$$("config_type_select").getPopup().getList().parse(options);
+			$$("config_type_select").refresh();
+
 		}, this);
 	},
 
 	$submit:function() {
 		var typeValue = $$("config_type_select").getValue();
 		var settingValue = $$("config_counter").getValue();
-		console.log("type select: " + typeValue);
+
+		var typeOption = this.config.typeOptions[typeValue];
+
+		var type = typeOption.type;
+
+		console.log("element: " + this.config.element.toLowerCase());
+		console.log("type value: " + typeValue);
+		console.log("type: " + type);
 		console.log("counter value: " + settingValue);
 
 		var baseURL = "/ab?cmd=configure_"+ this.config.element.toLowerCase();
 
-		if (typeValue == "off") {
+		if (type == "off") {
 			webix.ajax(baseURL + "&enabled=false");
-		} else if (typeValue == 1) {
+		} else if (type == 1) {
 			webix.ajax(baseURL + "&enabled=true&type=pwm&load=" + settingValue);
 		} else {
 			// convert to celcius
@@ -106,6 +134,8 @@ webix.protoUI({
 
 	$setType:function(type) {
 
+		var typeOption = this.config.typeOptions[type];
+
 		var counter = $$("config_counter");
 		var slider = $$("config_slider");
 
@@ -113,11 +143,11 @@ webix.protoUI({
 
 		var min = null;
 		var max = null;
-		var explicitValue = currentValue;
+		var explicitValue = typeOption.defaultSetting;
 		var enabled = true;
 		var step = 1;
 
-		switch (type) {
+		switch (typeOption.type) {
 		case "pwm":
 			min = 0;
 			max = 100;
@@ -125,18 +155,6 @@ webix.protoUI({
 		case "pid":
 			min = 32;
 			max = 212;
-			step = 0.1;
-			break;
-		case "mash_out_hold":
-			min = 32;
-			max = 212;
-			explicitValue = 82;
-			step = 0.1;
-			break;
-		case "sparge_hold":
-			min = 32;
-			max = 212;
-			explicitValue = 79.25;
 			step = 0.1;
 			break;
 		case "off":
@@ -160,7 +178,7 @@ webix.protoUI({
 		slider.config.max = max;
 
 		// if explicit value given, use that...
-		if (explicitValue != currentValue) {
+		if (explicitValue != null && explicitValue != currentValue) {
 			counter.setValue(explicitValue);
 			slider.setValue(explicitValue);
 		} else {

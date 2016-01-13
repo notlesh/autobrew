@@ -122,6 +122,10 @@ function init() {
 								element: "HLT",
 								top: pos.y - 250,
 								left: pos.x - 150,
+								presets: {
+									mash_out_hold: { displayValue: "Mash Out Hold", type: "pid", defaultSetting: 179.6},
+									sparge_hold: { displayValue: "Sparge Hold", type: "pid", defaultSetting: 174.65},
+								},
 							}).show();
 						}
 					}},
@@ -142,6 +146,13 @@ function init() {
 								element: "BK",
 								top: pos.y - 250,
 								left: pos.x - 150,
+								presets: {
+									pre_boil: { displayValue: "Pre-Boil", type: "pid", defaultSetting: 196},
+									boil: { displayValue: "Boil", type: "pwm", defaultSetting: 60},
+									berliner_weisse: { displayValue: "Berliner Weisse", type: "pid",
+									defaultSetting: 118}, pbw: { displayValue: "PBW", type: "pid", defaultSetting: 135},
+									preheat_mash: { displayValue: "Preheat for Mash", type: "pid", defaultSetting: 170},
+								},
 							}).show();
 						}
 					}},
