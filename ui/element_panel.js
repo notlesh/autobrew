@@ -8,19 +8,51 @@ webix.protoUI({
 			id: "config_form",
 			width: 300,
 			elements: [
-				{ view: "select", id: "config_type_select", label: "Control Type", value: 0, options: [
-					{id: 0, value: "Off"},
-					{id: 1, value: "PWM"},
-					{id: 2, value: "PID"},
-					{id: 3, value: "Mash Out Hold"},
-					{id: 4, value: "Sparge Hold"},
+				{ view: "select", id: "config_type_select", label: "Type", value: 0, labelWidth: 60, options: [
+					{id: "off", value: "Off"},
+					{id: "pwm", value: "PWM"},
+					{id: "pid", value: "PID"},
+					{id: "mash_out_hold", value: "Mash Out Hold"},
+					{id: "sparge_hold", value: "Sparge Hold"},
 				],
 				on: {
 					onChange: function(newValue, oldValue) {
-						$$("config_form").getParentView().$changeType(newValue);
+						$$("config_form").getParentView().$setType(newValue);
 					}
 				}},
-				{ view: "counter", id: "config_counter", label: "Control Setting", value: 0, min: 0, max: 100, step: 1 },
+				{
+					view: "counter",
+					id: "config_counter",
+					label: " ",
+					labelWidth: 60,
+					value: 0,
+					min: 0,
+					max: 100,
+					step: 1,
+					on: {
+						onChange: function(newValue, oldValue) {
+							$$("config_slider").setValue(newValue);
+						}
+					}
+				},
+				{ 
+					view: "slider",
+					id: "config_slider",
+					label: " ",
+					labelWidth: 60,
+					value: 0,
+					min: 0,
+					max: 100,
+					step: 1,
+					on: {
+						onChange: function(newValue, oldValue) {
+							$$("config_counter").setValue(newValue);
+						},
+						onSliderDrag: function() {
+							$$("config_counter").setValue(this.getValue());
+						},
+					}
+				},
 				{ margin: 5, cols: [
 					{ view: "button", id: "config_submit", value: "Submit", type: "form", on: {
 						onItemClick: function() {
@@ -29,11 +61,26 @@ webix.protoUI({
 					}},
 					{ view: "button", id: "config_cancel", value: "Cancel", on: {
 						'onItemClick': function() {
-							$$("config_form").getParentView().hide();
+							$$("config_form").getParentView().close();
 					}}}
 				]},
 			],
 		},
+	},
+
+	$init:function(config) {
+		if (typeof config.element != "string") {
+			throw "Invalid element (should be HLT or BK)";
+		}
+
+		config.head = "" + config.element + " Element Config";
+
+		// prime the layout
+		webix.delay(function() {
+			$$("config_counter").config.width = 400;
+			$$("config_counter").resize();
+			this.$setType("pid");
+		}, this);
 	},
 
 	$submit:function() {
@@ -44,7 +91,7 @@ webix.protoUI({
 
 		var baseURL = "/ab?cmd=configure_"+ this.config.element.toLowerCase();
 
-		if (typeValue == 0) {
+		if (typeValue == "off") {
 			webix.ajax(baseURL + "&enabled=false");
 		} else if (typeValue == 1) {
 			webix.ajax(baseURL + "&enabled=true&type=pwm&load=" + settingValue);
@@ -54,52 +101,82 @@ webix.protoUI({
 			webix.ajax(baseURL + "&enabled=true&type=pid&setpoint=" + celcius);
 		}
 
-		$$("config_form").getParentView().hide();
+		$$("config_form").getParentView().close();
 	},
 
-	$changeType:function(type) {
+	$setType:function(type) {
 
 		var counter = $$("config_counter");
+		var slider = $$("config_slider");
 
-		if (type == 0) {
-			counter.disable();
-		} else {
-			counter.enable();
-		}
+		var currentValue = counter.getValue();
+
+		var min = null;
+		var max = null;
+		var explicitValue = currentValue;
+		var enabled = true;
+		var step = 1;
 
 		switch (type) {
-		case "1":
-			console.log("0-100");
-			counter.config.min = 0;
-			counter.config.max = 100;
+		case "pwm":
+			min = 0;
+			max = 100;
 			break;
-		case "2":
-			console.log("32-212");
-			counter.config.min = 32;
-			counter.config.max = 212;
+		case "pid":
+			min = 32;
+			max = 212;
+			step = 0.1;
 			break;
-		case "3":
-			console.log("32-212");
-			counter.config.min = 32;
-			counter.config.max = 212;
-			counter.setValue(82);
+		case "mash_out_hold":
+			min = 32;
+			max = 212;
+			explicitValue = 82;
+			step = 0.1;
 			break;
-		case "4":
-			console.log("32-212");
-			counter.config.min = 32;
-			counter.config.max = 212;
-			counter.setValue(79.25);
+		case "sparge_hold":
+			min = 32;
+			max = 212;
+			explicitValue = 79.25;
+			step = 0.1;
 			break;
-		case "0":
-		}
-	},
-
-	$init:function(config) {
-		if (typeof config.element != "string") {
-			throw "Invalid element (should be HLT or BK)";
+		case "off":
+			enabled = false;
+			break;
 		}
 
-		config.head = "" + config.element + " Element Config";
+		if (! enabled) {
+			counter.disable();
+			slider.disable();
+		} else {
+			counter.enable();
+			slider.enable();
+		}
+
+		counter.config.step = step;
+
+		counter.config.min = min;
+		counter.config.max = max;
+		slider.config.min = min;
+		slider.config.max = max;
+
+		// if explicit value given, use that...
+		if (explicitValue != currentValue) {
+			counter.setValue(explicitValue);
+			slider.setValue(explicitValue);
+		} else {
+			// otherwise ensure that value is within bounds
+			if (currentValue > max) {
+				counter.setValue(max);
+				slider.setValue(max);
+			}
+			if (currentValue < min) {
+				counter.setValue(min);
+				slider.setValue(min);
+			}
+		}
+
+		counter.render();
+		slider.render();
 	},
 
 }, webix.ui.window);
