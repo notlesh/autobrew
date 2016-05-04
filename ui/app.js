@@ -2,31 +2,46 @@ function init() {
 
 	g_probeSettings = {
 		"28.EE9B8B040000": {
-			"color": "#FF0000",
-			"name": "BK"
+			"color": "#FF3A3C",
+			"name": "B"
 		},
 		"28.3AA87D040000": {
 			"color": "#4CB6D9",
-			"name": "HLT"
+			"name": "H"
 		},
 		"28.A1F07C040000": {
-			"color": "#5E5113",
-			"name": "MT"
+			"color": "#FF9A00",
+			"name": "M"
 		},
 		"28.42AB7D040000": {
-			"color": "#00CC33",
-			"name": "Ret"
+			"color": "#00FF40",
+			"name": "R"
 		},
 
 	};
 
 	// main layout
 	webix.ui({
+		id:"root",
 		rows:[
 			{ view:"smoothie", id:"main_graph" },
 			{
 				view:"toolbar", id: "bottomBar", padding: 5, cols:[
-					{},
+					{ view: "icon", icon: "gear", click:function() {
+
+							window.graphDisplayed = false;
+
+							webix.ui(
+								{ 
+									view: "view"
+									
+								},
+								$$("root"),
+								$$("main_graph")
+							);
+						}
+					},
+					{ id: "tempList", cols: [] },
 					{
 
 						view: "icon", icon: "bars", click:function(){
@@ -176,18 +191,28 @@ function init() {
 
 			for (var probeId in tempData) {
 
+				var probeData = tempData[probeId];
+
+				if (window.graphDisplayed) {
+					if (! mainGraph.$hasTimeSeries(probeId)) {
+						mainGraph.$addTimeSeries(probeId, g_probeSettings[probeId].color);
+					}
+
+					mainGraph.$addTimeSeriesData(probeId, probeData.lastSeen, probeData.tempF);
+				}
+
+
 				var labelId = "" + probeId + "_temp_label";
 
-				if (! mainGraph.$hasTimeSeries(probeId)) {
-					mainGraph.$addTimeSeries(probeId, g_probeSettings[probeId].color);
+				if ($$(labelId) == null) {
 
-					var bottomBar = $$("bottomBar");
-					bottomBar.addView( {
+					var tempList = $$("tempList");
+					tempList.addView( {
 						view:"label",
 						id: labelId,
 						temp: tempData[probeId].tempF.toFixed(2),
 						name: g_probeSettings[probeId].name,
-						template: "<span style='color: "+g_probeSettings[probeId].color+"; font-size: 2em;'>#name#: #temp#</span>",
+						template: "<span style='color: "+g_probeSettings[probeId].color+"; font-size: 2em; white-space: nowrap;' >#name#: #temp#</span>",
 					}, 0);
 				} else {
 					// update label
@@ -195,12 +220,9 @@ function init() {
 					label.data.temp = tempData[probeId].tempF.toFixed(2);
 					label.render();
 				}
-
-				var probeData = tempData[probeId];
-
-				mainGraph.$addTimeSeriesData(probeId, probeData.lastSeen, probeData.tempF);
 			}
 
 		});
 	}, 1000);
+	window.graphDisplayed = true;
 }

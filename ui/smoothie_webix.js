@@ -24,7 +24,7 @@ webix.protoUI({
 				}
 		});
 
-		this.smoothie.streamTo(elm, 1000);
+		this.smoothie.streamTo(elm);
 
 	},
 	$setSize:function(x,y) {
