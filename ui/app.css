@@ -1,4 +1,21 @@
+html, body {
+	height: 100%;
+	width: 100%;
+}
 .bottomBar {
   opacity: 0.8;
+}
+.probeDisplayTitle {
+	position: absolute;
+	left: 0px;
+	top: 10px;
+	font-size: 2em;
+	line-height: 30px;
+}
+.probeDisplayTemp {
+	position: absolute;
+	bottom: 27px;
+	right: 24px;
+	font-size: 4em;
 }
 

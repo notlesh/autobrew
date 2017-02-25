@@ -20,25 +20,21 @@ function init() {
 
 	};
 
+	g_probes = {};
+
 	// main layout
 	webix.ui({
 		id:"root",
+		width:"100%",
 		rows:[
-			{ view:"smoothie", id:"main_graph" },
+			{ view:"smoothie", id:"probes_data_view" },
 			{
 				view:"toolbar", id: "bottomBar", padding: 5, cols:[
 					{ view: "icon", icon: "gear", click:function() {
 
 							window.graphDisplayed = false;
 
-							webix.ui(
-								{ 
-									view: "view"
-									
-								},
-								$$("root"),
-								$$("main_graph")
-							);
+							redrawTempLayout();
 						}
 					},
 					{ id: "tempList", cols: [] },
@@ -187,11 +183,18 @@ function init() {
 		webix.ajax("/temp_data.json", function(text, data, XmlHttpRequest) {
 			var tempData = JSON.parse(text);
 
-			var mainGraph = $$("main_graph");
+			var mainGraph = $$("probes_data_view");
 
 			for (var probeId in tempData) {
 
 				var probeData = tempData[probeId];
+				var isNewProbe = ! g_probes.hasOwnProperty(probeId);
+
+				if (isNewProbe) {
+					console.log("New probe: "+ probeId);
+					// first time seeing this probe
+					g_probes[probeId] = JSON.parse(JSON.stringify(probeData)); // TODO: better way to clone?
+				}
 
 				if (window.graphDisplayed) {
 					if (! mainGraph.$hasTimeSeries(probeId)) {
@@ -199,6 +202,10 @@ function init() {
 					}
 
 					mainGraph.$addTimeSeriesData(probeId, probeData.lastSeen, probeData.tempF);
+				} else {
+					if (isNewProbe) {
+						redrawTempLayout();
+					}
 				}
 
 
@@ -225,4 +232,37 @@ function init() {
 		});
 	}, 1000);
 	window.graphDisplayed = true;
+
+	redrawTempLayout = function() {
+		console.log("redrawTempLayout()");
+
+		if (! window.graphDisplayed) {
+
+			// overwrite temp probe area with new one
+			webix.ui(
+				{ 
+					view: "dataview",
+					id: "probes_data_view",
+					xCount: 2,
+					template: "<div style='position: relative; width: 240px; height: 120px;'><span style='color: #color#' class='probeDisplayTitle'>#name#</span><br/><span style='color: #color#' class='probeDisplayTemp'>#temp#</span></div>",
+					data: [],
+					sizeToContent: true
+
+					
+				},
+				$$("root"),
+				$$("probes_data_view")
+			);
+
+			for (var probeId in g_probes) {
+				console.log("probe: " + probeId +": " + g_probes[probeId]);
+
+				$$("probes_data_view").add( {
+					name: g_probeSettings[probeId].name,
+					color: g_probeSettings[probeId].color,
+					temp: g_probes[probeId].tempF.toFixed(2),
+				}, 0);
+			}
+		}
+	};
 }
