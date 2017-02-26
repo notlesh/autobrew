@@ -34,21 +34,39 @@ class Application(tk.Frame):
 		while not self.stopped:
 
 			try:
-				data = open("/var/www/temp_data.json", "r")
+				data = open("/var/www/html/temp_data.json", "r")
 				jsonObj = json.load(data)
 
-				bkTempF = jsonObj["28.EE9B8B040000"]["tempF"]
-				hltTempF = jsonObj["28.3AA87D040000"]["tempF"]
-				mtTempF = jsonObj["28.A1F07C040000"]["tempF"]
-				retTempF = jsonObj["28.42AB7D040000"]["tempF"]
+				if jsonObj.has_key("28.EE9B8B040000"):
+					bkTempF = jsonObj["28.EE9B8B040000"]["tempF"]
+					self.bkTempLabel.configure(text="" + format(bkTempF, '.2f') + " F")
+				else:
+					self.bkTempLabel.configure(text=" - ")
 
-				self.bkTempLabel.configure(text="" + format(bkTempF, '.2f') + " F")
-				self.hltTempLabel.configure(text="" + format(hltTempF, '.2f') + " F")
-				self.mtTempLabel.configure(text="" + format(mtTempF, '.2f') + " F")
-				self.retTempLabel.configure(text="" + format(retTempF, '.2f') + " F")
+
+				if jsonObj.has_key("28.3AA87D040000"):
+					hltTempF = jsonObj["28.3AA87D040000"]["tempF"]
+					self.hltTempLabel.configure(text="" + format(hltTempF, '.2f') + " F")
+				else:
+					self.hltTempLabel.configure(text=" - ")
+
+				if jsonObj.has_key("28.A1F07C040000"):
+					mtTempF = jsonObj["28.A1F07C040000"]["tempF"]
+					self.mtTempLabel.configure(text="" + format(mtTempF, '.2f') + " F")
+				else:
+					self.mtTempLabel.configure(text=" - ")
+
+				if jsonObj.has_key("28.42AB7D040000"):
+					retTempF = jsonObj["28.42AB7D040000"]["tempF"]
+					self.retTempLabel.configure(text="" + format(retTempF, '.2f') + " F")
+				else:
+					self.retTempLabel.configure(text=" - ")
+
 
 			except OSError as err:
 				print("OS error: {0}".format(err))
+			except Exception as e:
+				print str(e)
 			except:
 				print("Unexpected error")
 				
@@ -58,7 +76,7 @@ class Application(tk.Frame):
 	def createWidgets(self):
 
 		medFont = tkFont.Font(family="DejaVuSans", size=16)
-		bigFont = tkFont.Font(family="DejaVuSans", size=44, weight=tkFont.BOLD)
+		bigFont = tkFont.Font(family="DejaVuSans", size=64, weight=tkFont.BOLD)
 
 		# Temps
 		self.tempsFrame = tk.LabelFrame(self, text="Temperatures", padx=5, pady=5, font=medFont)

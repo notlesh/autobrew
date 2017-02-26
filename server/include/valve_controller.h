@@ -6,6 +6,8 @@
 #include <roller/core/types.h>
 #include <roller/core/thread.h>
 
+#include <json.hpp>
+
 #include "current_limiter.h"
 
 using namespace roller;
@@ -50,6 +52,11 @@ public:
 	void setMode(Mode mode);
 
 	/**
+	 * Get the mode
+	 */
+	Mode getMode();
+
+	/**
 	 * Start the thread. Call this to kick off the thread. Should only be called once.
 	 */
 	void start();
@@ -80,5 +87,7 @@ private:
 	uint32_t _floatSwitchId;
 	uint32_t _valveSwitchId;
 };
+
+void to_json(nlohmann::json& j, const ValveController::Mode& mode);
 
 #endif // __AB2_VALVE_CONTROLLER_INCLUDED__

@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 
+#include <json.hpp>
+
 #include "pwm.h"
 
 /**
@@ -62,12 +64,29 @@ public:
 	 */
 	struct PinConfiguration {
 		std::string _name = "";
+		std::string _id = "";
 		uint32_t _pinNumber = 0;
 		uint32_t _milliAmps = 0;
 		bool _critical = false;
 		bool _pwm = false;
 		uint32_t _pwmFrequency = 0;
 		float _pwmLoad = 0.0f;
+	};
+
+	/**
+	 * This structure keeps up with the state of a pin, including the controller
+	 * (either a Switch or a PWMController as necessary) and also the overriden
+	 * configuration for a pin (whether or not it's disabled if on/off or the
+	 * scaled-back load if it's a PWM).
+	 */
+	struct PinState {
+		uint32_t _pinNumber = 0;
+		bool _desiredState = false;
+		bool _overriden = false;
+		bool _enabled = false; // override for non-pwm
+		float _pwmLoad = 0.0f; // override for pwm
+		std::shared_ptr<Switch> _ioSwitch; // valid whether pwm or not
+		std::shared_ptr<PWMController> _pwmController; // only if pwm. includes dedicated thread
 	};
 
 	/**
@@ -98,6 +117,11 @@ public:
 	PinConfiguration getPinConfiguration(uint32_t pin);
 
 	/**
+	 * Returns the pin state for the given pin
+	 */
+	const PinState& getPinState(uint32_t pin);
+
+	/**
 	 * Update a pin configuration
 	 */
 	void updatePinConfiguration(const PinConfiguration& config);
@@ -113,23 +137,21 @@ public:
 	 */
 	void disablePin(uint32_t pin);
 
-private:
+	/**
+	 * Returns true if the given pin is enabled, false otherwise.
+	 *
+	 * This does not mean that the pin is on; the current limiter may
+	 * have it turned off. It reflects the last call to enablePin() or
+	 * disablePin().
+	 */
+	bool isEnabled(uint32_t pin);
 
 	/**
-	 * This structure keeps up with the state of a pin, including the controller
-	 * (either a Switch or a PWMController as necessary) and also the overriden
-	 * configuration for a pin (whether or not it's disabled if on/off or the
-	 * scaled-back load if it's a PWM).
+	 * Convert to json
 	 */
-	struct PinState {
-		uint32_t _pinNumber = 0;
-		bool _desiredState = false;
-		bool _overriden = false;
-		bool _enabled = false; // override for non-pwm
-		float _pwmLoad = 0.0f; // override for pwm
-		std::shared_ptr<Switch> _ioSwitch; // valid whether pwm or not
-		std::shared_ptr<PWMController> _pwmController; // only if pwm. includes dedicated thread
-	};
+	void to_json(nlohmann::json& j) const;
+
+private:
 
 	Mutex _lock;
 	std::map<uint32_t, PinConfiguration> _pinConfigurations;
@@ -148,5 +170,9 @@ private:
 	 */
 	void evaluateConfiguration();
 };
+
+void to_json(nlohmann::json& j, const CurrentLimiter::PinConfiguration& pinConfig);
+void to_json(nlohmann::json& j, const CurrentLimiter::PinState& pinState);
+void to_json(nlohmann::json& j, const CurrentLimiter& currentLimiter);
 
 #endif // __AB_CURRENT_LIMITER_H

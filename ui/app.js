@@ -71,14 +71,14 @@ function init() {
 				{rows:[
 					{view:"label", id:"label_pump_1", label:"Pump 1", align:"center"},
 					{view:"segmented", id:"selector_pump_1", align:"right", multiview:true, options: [
-						{ id:0, value:"Off"},
-						{ id:1, value:"On"}
+						{ id:"off", value:"Off"},
+						{ id:"on", value:"On"}
 					],
 					on: {
 						onChange: function(newValue, oldValue) {
-							if (newValue == 0) {
+							if (newValue == "off") {
 								webix.ajax("/ab?cmd=p1_off");
-							} else if (newValue == 1) {
+							} else if (newValue == "on") {
 								webix.ajax("/ab?cmd=p1_on");
 							}
 						}
@@ -89,14 +89,14 @@ function init() {
 				{rows:[
 					{view:"label", id:"label_pump_2", label:"Pump 2", align:"center"},
 					{view:"segmented", id:"selector_pump_2", align:"right", multiview:true, options: [
-						{ id:0, value:"Off"},
-						{ id:1, value:"On"}
+						{ id:"off", value:"Off"},
+						{ id:"on", value:"On"}
 					],
 					on: {
 						onChange: function(newValue, oldValue) {
-							if (newValue == 0) {
+							if (newValue == "off") {
 								webix.ajax("/ab?cmd=p2_off");
-							} else if (newValue == 1) {
+							} else if (newValue == "on") {
 								webix.ajax("/ab?cmd=p2_on");
 							}
 						}
@@ -106,17 +106,17 @@ function init() {
 				{rows:[
 					{view:"label", id:"label_valve", label:"Valve", align:"center"},
 					{view:"segmented", id:"selector_valve", align:"right", multiview:true, options: [
-						{ id:0, value:"Off"},
-						{ id:1, value:"On"},
-						{ id:2, value:"Float"}
+						{ id:"off", value:"Off"},
+						{ id:"on", value:"On"},
+						{ id:"float", value:"Float"}
 					],
 					on: {
 						onChange: function(newValue, oldValue) {
-							if (newValue == 0) {
+							if (newValue == "off") {
 								webix.ajax("/ab?cmd=valve_off");
-							} else if (newValue == 1) {
+							} else if (newValue == "on") {
 								webix.ajax("/ab?cmd=valve_on");
-							} else if (newValue == 2) {
+							} else if (newValue == "float") {
 								webix.ajax("/ab?cmd=valve_float");
 							}
 						}
@@ -228,6 +228,28 @@ function init() {
 					label.render();
 				}
 			}
+
+		});
+
+		webix.ajax("/ab?cmd=status", function(text, data, XmlHttpRequest) {
+			var statusData = JSON.parse(text);
+			// console.log("valve status: "+ statusData.pins.valve1.state.enabled);
+
+			// update the ui widgets. we temporarily block events so that
+			// the new value will not trigger an API call back to the server
+
+			// TODO: clean this up. a refactor with the webix jet stuff would be nice...
+			var selectorUpdate = function(selector, value) {
+				if (selector.getValue() != value) {
+					selector.blockEvent();
+					selector.setValue(value);
+					selector.unblockEvent();
+				}
+			}
+
+			selectorUpdate( $$("selector_valve"), statusData.controls.valve );
+			selectorUpdate( $$("selector_pump_1"), statusData.controls.pump1 );
+			selectorUpdate( $$("selector_pump_2"), statusData.controls.pump2 );
 
 		});
 	}, 1000);

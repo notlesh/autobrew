@@ -6,6 +6,8 @@
 #include <fcgiapp.h>
 #include <fcgio.h>
 
+#include <json.hpp>
+
 #include <roller/core/types.h>
 #include <roller/core/log.h>
 #include <roller/core/util.h>
@@ -35,6 +37,7 @@
 
 using namespace roller;
 namespace po = boost::program_options;
+using json = nlohmann::json;
 
 // globals
 std::atomic_bool g_appRunning(false);
@@ -250,7 +253,20 @@ void handleRequest( FCGX_Request& request ) {
 
 	} else if (handlerName == "status") {
 
-		jsonResponse = "{ \"response\": \"All systems go\" }";
+		json jsonObj = {
+			{"status", "OK"},
+			{"pins",  g_currentLimiter}
+		};
+
+		json controlsJsonObj = {
+			{"valve", g_valveController.getMode()},
+			{"pump1", g_currentLimiter.getPinState(18)._desiredState},
+			{"pump2", g_currentLimiter.getPinState(27)._desiredState},
+		};
+
+		jsonObj["controls"] = controlsJsonObj;
+
+		jsonResponse = jsonObj.dump(4);
 		responseCode = 200;
 
 	// TODO: use wiring pi library here and track pin state?
@@ -433,6 +449,7 @@ void configCurrentLimiter() {
 	// pump 1
 	CurrentLimiter::PinConfiguration config;
 	config._name = "Pump 1";
+	config._id = "p1";
 	config._pinNumber = 18;
 	config._milliAmps = 1400;
 	config._critical = true;
@@ -445,6 +462,7 @@ void configCurrentLimiter() {
 
 	// pump 2
 	config._name = "Pump 2";
+	config._id = "p2";
 	config._pinNumber = 27;
 	config._milliAmps = 1400;
 	config._critical = true;
@@ -457,6 +475,7 @@ void configCurrentLimiter() {
 
 	// valve 1
 	config._name = "Valve 1";
+	config._id = "valve1";
 	config._pinNumber = AB_VALVE_PIN;
 	config._milliAmps = 200;
 	config._critical = true;
@@ -469,6 +488,7 @@ void configCurrentLimiter() {
 
 	// BK element safety
 	config._name = "BK Element Safety";
+	config._id = "bk_safety";
 	config._pinNumber = 10;
 	config._milliAmps = 34;
 	config._critical = true;
@@ -481,6 +501,7 @@ void configCurrentLimiter() {
 
 	// HLT element safety
 	config._name = "HLT Element Safety";
+	config._id = "hlt_safety";
 	config._pinNumber = 24;
 	config._milliAmps = 34;
 	config._critical = true;
@@ -493,6 +514,7 @@ void configCurrentLimiter() {
 
 	// BK element 
 	config._name = "BK Element";
+	config._id = "bk";
 	config._pinNumber = 17;
 	config._milliAmps = 23000;
 	config._critical = false;
@@ -505,6 +527,7 @@ void configCurrentLimiter() {
 
 	// HLT element 
 	config._name = "HLT Element";
+	config._id = "hlt";
 	config._pinNumber = 4;
 	config._milliAmps = 23000;
 	config._critical = false;

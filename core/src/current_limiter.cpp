@@ -1,5 +1,7 @@
 #include "current_limiter.h"
 
+using json = nlohmann::json;
+
 CurrentLimiter::CurrentLimiter(uint32_t baseMilliAmps, uint32_t maxMilliAmps)
 		: _baseMilliAmps(baseMilliAmps)
 		, _maxMilliAmps(maxMilliAmps)
@@ -76,6 +78,19 @@ CurrentLimiter::PinConfiguration CurrentLimiter::getPinConfiguration(uint32_t pi
 	return itr->second;
 }
 
+// getPinState
+const CurrentLimiter::PinState& CurrentLimiter::getPinState(uint32_t pin) {
+	MutexLocker locker(_lock);
+
+	auto itr = _pinStates.find(pin);
+	if (itr == _pinStates.end()) {
+		throw RollerException("No pin state for pin %d", pin);
+	}
+
+	return itr->second;
+}
+
+
 void CurrentLimiter::updatePinConfiguration(const CurrentLimiter::PinConfiguration& config) {
 	MutexLocker locker(_lock);
 
@@ -131,6 +146,19 @@ void CurrentLimiter::disablePin(uint32_t pin) {
 		state._desiredState = false;
 		evaluateConfiguration();
 	}
+}
+
+bool CurrentLimiter::isEnabled(uint32_t pin) {
+	MutexLocker locker(_lock);
+
+	auto itr = _pinConfigurations.find(pin);
+	if (itr == _pinConfigurations.end()) {
+		throw RollerException("Cannot enable non-existent pin %u", pin);
+	}
+
+	PinState& state = _pinStates[pin];
+
+	return state._desiredState;
 }
 
 void CurrentLimiter::evaluateConfiguration() {
@@ -308,3 +336,53 @@ void CurrentLimiter::evaluateConfiguration() {
 
 }
 
+// to_json
+void to_json(json& j, const CurrentLimiter::PinConfiguration& pinConfig) {
+	j = json {
+		{"name", pinConfig._name},
+		{"id", pinConfig._id},
+		{"pinNumber", pinConfig._pinNumber},
+		{"milliAmps", pinConfig._milliAmps},
+		{"critical", pinConfig._critical},
+		{"pwm", pinConfig._pwm},
+		{"pwmFrequency", pinConfig._pwmFrequency},
+		{"pwmLoad", pinConfig._pwmLoad}
+	};
+}
+
+// to_json
+void to_json(json& j, const CurrentLimiter::PinState& pinState) {
+	j = json {
+		{"pinNumber", pinState._pinNumber},
+		{"desiredState", pinState._desiredState},
+		{"overriden", pinState._overriden},
+		{"enabled", pinState._enabled},
+		{"pwmLoad", pinState._pwmLoad}
+	};
+}
+
+// to_json
+void to_json(json& j, const CurrentLimiter& currentLimiter) {
+	currentLimiter.to_json(j);
+}
+void CurrentLimiter::to_json(nlohmann::json& j) const {
+	j = json {
+		{"baseMilliAmps", _baseMilliAmps},
+		{"maxMilliAmps", _maxMilliAmps}
+	};
+
+	for (const auto itr : _pinConfigurations) {
+
+		const PinConfiguration pinConfig = itr.second;
+		const PinState pinState = _pinStates.at(pinConfig._pinNumber);
+
+		json pinJsonObj = {
+			{"config", pinConfig},
+			{"state", pinState}
+		};
+
+		j[pinConfig._id] = pinJsonObj;
+
+	}
+
+}

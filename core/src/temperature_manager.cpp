@@ -268,7 +268,7 @@ void TemperatureManager::dumpTempData() {
 	auto probeIds = listProbes();
 
 	ofstream htmlOut;
-	htmlOut.open( "/var/www/temp_data.html", ios::trunc | ios::out );
+	htmlOut.open( "/var/www/html/temp_data.html", ios::trunc | ios::out );
 
 	// html bullshit
 	htmlOut << "<html><head><meta http-equiv=\"refresh\" content=\"3\" /></head><body>" << endl;
@@ -300,7 +300,7 @@ void TemperatureManager::dumpTempData() {
 
 	// now do the same, but in json format
 	ofstream jsonOut;
-	jsonOut.open( "/var/www/temp_data.json", ios::trunc | ios::out );
+	jsonOut.open( "/var/www/html/temp_data.json", ios::trunc | ios::out );
 
 	jsonOut << "{\n";
 

@@ -29,9 +29,14 @@ ValveController::~ValveController() {
 	_thread.join();
 }
 
-// start
+// setMode
 void ValveController::setMode(Mode mode) {
 	_mode = mode;
+}
+
+// getMode
+ValveController::Mode ValveController::getMode() {
+	return _mode;
 }
 
 // start
@@ -108,4 +113,23 @@ void ValveController::run() {
 	Log::i("ValveController thread exiting");
 	_running = false;
 	_started = false;
+}
+
+// to_json
+void to_json(nlohmann::json& j, const ValveController::Mode& mode) {
+	std::string str;
+	switch (mode) {
+		case ValveController::Mode::OFF:
+			str = "off";
+			break;
+		case ValveController::Mode::ON:
+			str = "on";
+			break;
+		case ValveController::Mode::FLOAT:
+			str = "float";
+			break;
+
+	}
+
+	j = str;
 }
