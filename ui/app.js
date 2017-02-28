@@ -19,6 +19,8 @@ function init() {
 		},
 
 	};
+	g_stateCounter = 0;
+	g_lastDetailedStateUpdate = Date.now() - 5000;
 
 	g_probes = {};
 
@@ -66,9 +68,10 @@ function init() {
 		body:{
 			borderless:true,
 			margin: 5,
+			paddingX: 10,
 			cols:[
-				{},
-				{rows:[
+				{gravity: 2,
+				rows:[
 					{view:"label", id:"label_pump_1", label:"Pump 1", align:"center"},
 					{view:"segmented", id:"selector_pump_1", align:"right", multiview:true, options: [
 						{ id:"off", value:"Off"},
@@ -85,8 +88,8 @@ function init() {
 					}}
 				]},
 
-				{},
-				{rows:[
+				{gravity: 2,
+				rows:[
 					{view:"label", id:"label_pump_2", label:"Pump 2", align:"center"},
 					{view:"segmented", id:"selector_pump_2", align:"right", multiview:true, options: [
 						{ id:"off", value:"Off"},
@@ -102,8 +105,8 @@ function init() {
 						}
 					}}
 				]},
-				{},
-				{rows:[
+				{gravity: 2,
+				rows:[
 					{view:"label", id:"label_valve", label:"Valve", align:"center"},
 					{view:"segmented", id:"selector_valve", align:"right", multiview:true, options: [
 						{ id:"off", value:"Off"},
@@ -122,8 +125,8 @@ function init() {
 						}
 					}}
 				]},
-				{},
-				{rows:[
+				{gravity:3,
+				rows:[
 					{view:"button", id:"button_hlt", label:"HLT Element", on: {
 						onItemClick: function() {
 							var pos = webix.html.offset($$("button_hlt").getNode());
@@ -140,14 +143,11 @@ function init() {
 							}).show();
 						}
 					}},
-					{ cols: [ 
-						{view:"label", label:"PWM", align:"center"},
-						{view:"label", label:"60%", align:"center"},
-					]},
+					{view:"label", id:"hlt_status", label:"", align:"center", css:"elementStatusLabel"},
 
 				]},
-				{},
-				{rows:[
+				{gravity: 3,
+				rows:[
 					{view:"button", id:"button_bk", label:"BK Element", on: {
 						onItemClick: function() {
 							var pos = webix.html.offset($$("button_bk").getNode());
@@ -167,13 +167,9 @@ function init() {
 							}).show();
 						}
 					}},
-					{ cols: [ 
-						{view:"label", label:"PWM", align:"center"},
-						{view:"label", label:"60%", align:"center"},
-					]},
+					{view:"label", id:"bk_status", label:"", align:"center", css:"elementStatusLabel"},
 
 				]},
-				{},
 			]
 		}
 	});
@@ -233,23 +229,82 @@ function init() {
 
 		webix.ajax("/ab?cmd=status", function(text, data, XmlHttpRequest) {
 			var statusData = JSON.parse(text);
-			// console.log("valve status: "+ statusData.pins.valve1.state.enabled);
 
-			// update the ui widgets. we temporarily block events so that
-			// the new value will not trigger an API call back to the server
-
-			// TODO: clean this up. a refactor with the webix jet stuff would be nice...
-			var selectorUpdate = function(selector, value) {
-				if (selector.getValue() != value) {
-					selector.blockEvent();
-					selector.setValue(value);
-					selector.unblockEvent();
-				}
+			var now = Date.now();
+			var forceUpdate = false;
+			if (now - g_lastDetailedStateUpdate > 5000) {
+				console.log("Forcing detailed update...");
+				forceUpdate = true;
 			}
 
-			selectorUpdate( $$("selector_valve"), statusData.controls.valve );
-			selectorUpdate( $$("selector_pump_1"), statusData.controls.pump1 );
-			selectorUpdate( $$("selector_pump_2"), statusData.controls.pump2 );
+			// if stateCounter is not up to date, request new state
+			if (forceUpdate || statusData.stateCounter != g_stateCounter) {
+				console.log("our state counter ("+g_stateCounter+") differs from server ("+
+						statusData.stateCounter+") (or we are forcing update)");
+
+				webix.ajax("/ab?cmd=getState", function(text, data, XmlHttpRequest) {
+					var stateData = JSON.parse(text);
+
+					// update the ui widgets. we temporarily block events so that
+					// the new value will not trigger an API call back to the server
+
+					// TODO: clean this up. a refactor with the webix jet stuff would be nice...
+					var selectorUpdate = function(selector, value) {
+						if (selector.getValue() != value) {
+							selector.blockEvent();
+							selector.setValue(value);
+							selector.unblockEvent();
+						}
+					}
+
+					selectorUpdate( $$("selector_valve"), stateData.controls.valve );
+					selectorUpdate( $$("selector_pump_1"), stateData.controls.pump1 );
+					selectorUpdate( $$("selector_pump_2"), stateData.controls.pump2 );
+
+					console.log("updating our state counter from "+ g_stateCounter
+							+ " to " + statusData.stateCounter);
+					g_stateCounter = statusData.stateCounter;
+
+					// TODO: as above -- clean this up
+					var elementStatusLabelUpdate = function(label, type, elementJsonObj, pidJsonObj) {
+
+						if (type == "off") {
+							// label is: "Off"
+							label.setValue("Off");
+							console.log("Updating label to Off");
+
+						} else {
+							// we will show PWM or PID with PWM -- so build up PWM
+							var pwmValueStr = (elementJsonObj.config.pwmLoad * 100).toFixed(1) + "%";
+							var pwmActualStr = (elementJsonObj.state.pwmLoad * 100).toFixed(1) + "%";
+							var pwmStr = "PWM: "+ pwmValueStr + "(" + pwmActualStr + ")";
+
+							if (type == "pid") {
+								// PID -- most complicated
+								// Label is: PID 200F (PWM: 60% (50%))
+								var tempF = pidJsonObj.setpoint * 1.8 + 32;
+								var pidValueStr = tempF.toFixed(1) + "\xB0F";
+								var pidStr = "PID: "+ pidValueStr +"("+ pwmStr +")";
+								console.log("Updating label to "+ pidStr);
+								label.setValue(pidStr);
+							} else if (type == "pwm") {
+								// PWM -- show set and actual
+								// Label is: PWM: 60% (50%)
+								label.setValue(pwmStr);
+								console.log("Updating label to "+ pwmStr);
+							} else {
+								console.log("Unrecognized element type: "+ type);
+								label.setValue("ERROR");
+							}
+						}
+					}
+
+					elementStatusLabelUpdate( $$("hlt_status"), stateData.controls.hlt, stateData.pins.hlt, stateData.pid.hlt );
+					elementStatusLabelUpdate( $$("bk_status"), stateData.controls.bk, stateData.pins.bk, stateData.pid.bk );
+				});
+
+				g_lastDetailedStateUpdate = Date.now();
+			}
 
 		});
 	}, 1000);

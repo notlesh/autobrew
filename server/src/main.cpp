@@ -42,12 +42,16 @@ using json = nlohmann::json;
 // globals
 std::atomic_bool g_appRunning(false);
 
-std::atomic_bool g_hltEnabled(false);
-std::atomic_bool g_bkEnabled(false);
+std::atomic_bool g_hltPidEnabled(false);
+std::atomic_bool g_bkPidEnabled(false);
+std::string g_bkMode = "off";
+std::string g_hltMode = "off";
 volatile float g_hltSetpoint = -100.0f;
 volatile float g_bkSetpoint = -100.0f;
 StringId g_hltTempProbeId = StringId::intern("28.3AA87D040000");
 StringId g_bkTempProbeId = StringId::intern("28.EE9B8B040000");
+
+std::atomic<uint32_t> g_stateCounter = {0}; // changes each time there is a change in state
 
 CurrentLimiter g_currentLimiter(700, 35000); // base is 0.7 amps, total allowed 35 amps
 ValveController g_valveController(
@@ -57,12 +61,25 @@ ValveController g_valveController(
 
 // handleSignal
 void handleSignal( i32 sig ) {
-	Log::i( "sig %d caught, flagging app to stop running", sig );
-	g_appRunning = false;
-	FCGX_ShutdownPending();
 
-	// hack to make fcgx actually die
-	system("curl http://localhost/ab/ping &");
+	// fuck it...
+	abort();
+
+	/*
+	if (g_appRunning) {
+		Log::i( "sig %d caught, flagging app to stop running", sig );
+		g_appRunning = false;
+		FCGX_ShutdownPending();
+
+		// hack to make fcgx actually die
+		system("curl http://localhost/ab?cmd=status");
+
+
+	} else {
+		Log::i( "sig %d caught, really dying this time...");
+		exit(1);
+	}
+	*/
 }
 
 // handleRequest
@@ -215,7 +232,6 @@ void handleRequest( FCGX_Request& request ) {
 	
 	// get last part of URI
 	// TODO: clean this up
-	Log::i( "         request handler name: %s", handlerName.c_str());
 
 	std::string jsonResponse = "{}";
 	i32 responseCode = 200;
@@ -255,16 +271,41 @@ void handleRequest( FCGX_Request& request ) {
 
 		json jsonObj = {
 			{"status", "OK"},
+			{"stateCounter", g_stateCounter.load()}
+		};
+
+		jsonResponse = jsonObj.dump(4);
+		responseCode = 200;
+
+	} else if (handlerName == "getState") {
+
+		json jsonObj = {
 			{"pins",  g_currentLimiter}
 		};
+
+		// controls
 
 		json controlsJsonObj = {
 			{"valve", g_valveController.getMode()},
 			{"pump1", g_currentLimiter.getPinState(18)._desiredState},
 			{"pump2", g_currentLimiter.getPinState(27)._desiredState},
+			{"bk", g_bkMode},
+			{"hlt", g_hltMode}
 		};
-
 		jsonObj["controls"] = controlsJsonObj;
+
+		// pid controllers
+		json pidJsonObj = {
+			{"bk", {
+				{"pid", g_bkPidEnabled.load()},
+				{"setpoint", g_bkSetpoint}
+			}},
+			{"hlt", {
+				{"pid", g_hltPidEnabled.load()},
+				{"setpoint", g_hltSetpoint}
+			}}
+		};
+		jsonObj["pid"] = pidJsonObj;
 
 		jsonResponse = jsonObj.dump(4);
 		responseCode = 200;
@@ -272,24 +313,31 @@ void handleRequest( FCGX_Request& request ) {
 	// TODO: use wiring pi library here and track pin state?
 	} else if (handlerName == "p1_on") {
 		g_currentLimiter.enablePin(18);
+		g_stateCounter++;
 
 	} else if (handlerName == "p1_off") {
 		g_currentLimiter.disablePin(18);
+		g_stateCounter++;
 
 	} else if (handlerName == "p2_on") {
 		g_currentLimiter.enablePin(27);
+		g_stateCounter++;
 
 	} else if (handlerName == "p2_off") {
 		g_currentLimiter.disablePin(27);
+		g_stateCounter++;
 
 	} else if (handlerName == "valve_on") {
 		g_valveController.setMode(ValveController::Mode::ON);
+		g_stateCounter++;
 
 	} else if (handlerName == "valve_off") {
 		g_valveController.setMode(ValveController::Mode::OFF);
+		g_stateCounter++;
 
 	} else if (handlerName == "valve_float") {
 		g_valveController.setMode(ValveController::Mode::FLOAT);
+		g_stateCounter++;
 
 	} else if (handlerName == "configure_bk") {
 
@@ -308,7 +356,8 @@ void handleRequest( FCGX_Request& request ) {
 				} else {
 					f32 setpoint = Serialization::toF32(params["setpoint"]);
 					g_bkSetpoint = setpoint;
-					g_bkEnabled = true;
+					g_bkPidEnabled = true;
+					g_bkMode = "pid";
 					g_currentLimiter.enablePin(10);
 				}
 			} else if (params["type"] == "pwm") {
@@ -320,7 +369,8 @@ void handleRequest( FCGX_Request& request ) {
 					pinConfiguration._pwmLoad = load;
 					g_currentLimiter.updatePinConfiguration(pinConfiguration);
 					g_currentLimiter.enablePin(10);
-					g_bkEnabled = false;
+					g_bkPidEnabled = false;
+					g_bkMode = "pwm";
 				}
 			} else {
 				throw RollerException("illegal type parameter (%s) for configure_bk", params["type"].c_str());
@@ -338,8 +388,10 @@ void handleRequest( FCGX_Request& request ) {
 			g_currentLimiter.disablePin(10);
 
 			// flag bk pid to stop
-			g_bkEnabled = false;
+			g_bkPidEnabled = false;
+			g_bkMode = "off";
 		}
+		g_stateCounter++;
 	} else if (handlerName == "configure_hlt") {
 
 		bool enabled = Serialization::toBool(params["enabled"]);
@@ -352,7 +404,8 @@ void handleRequest( FCGX_Request& request ) {
 				} else {
 					f32 setpoint = Serialization::toF32(params["setpoint"]);
 					g_hltSetpoint = setpoint;
-					g_hltEnabled = true;
+					g_hltPidEnabled = true;
+					g_hltMode = "pid";
 					g_currentLimiter.enablePin(24);
 				}
 			} else if (params["type"] == "pwm") {
@@ -364,7 +417,8 @@ void handleRequest( FCGX_Request& request ) {
 					pinConfiguration._pwmLoad = load;
 					g_currentLimiter.updatePinConfiguration(pinConfiguration);
 					g_currentLimiter.enablePin(24);
-					g_hltEnabled = false;
+					g_hltPidEnabled = false;
+					g_hltMode = "pwm";
 				}
 			} else {
 				throw RollerException("illegal type parameter (%s) for configure_hlt", params["type"].c_str());
@@ -381,8 +435,10 @@ void handleRequest( FCGX_Request& request ) {
 			g_currentLimiter.disablePin(24);
 
 			// flag hlt pid to stop
-			g_hltEnabled = false;
+			g_hltPidEnabled = false;
+			g_hltMode = "off";
 		}
+		g_stateCounter++;
 
 	} else {
 
@@ -558,7 +614,7 @@ void pidLoop() {
 	while (g_appRunning) {
 
 		// update HLT PID if needed
-		if (g_hltEnabled) {
+		if (g_hltPidEnabled) {
 
 			// initialize HLT PID if needed
 			if (! hltSetup) {
@@ -590,7 +646,7 @@ void pidLoop() {
 		}
 
 		// update BK PID if needed
-		if (g_bkEnabled) {
+		if (g_bkPidEnabled) {
 
 			// initialize BK PID if needed
 			if (! bkSetup) {

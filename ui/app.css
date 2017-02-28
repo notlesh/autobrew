@@ -19,3 +19,9 @@ html, body {
 	font-size: 4em;
 }
 
+.elementStatusLabel {
+	overflow: visible;
+	white-space: nowrap;
+	font-size: small;
+	font-weight: normal;
+}
