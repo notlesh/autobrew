@@ -42,7 +42,7 @@ function init() {
 					{ id: "tempList", cols: [] },
 					{
 
-						view: "icon", icon: "bars", click:function(){
+						view: "icon", icon: "bars", id: "menuToggleButton", click:function(){
 							if( $$("menu").config.hidden){
 								$$("menu").show();
 							}
@@ -73,7 +73,7 @@ function init() {
 				{gravity: 2,
 				rows:[
 					{view:"label", id:"label_pump_1", label:"Pump 1", align:"center"},
-					{view:"segmented", id:"selector_pump_1", align:"right", multiview:true, options: [
+					{view:"segmented", id:"selector_pump_1", align:"right", options: [
 						{ id:"off", value:"Off"},
 						{ id:"on", value:"On"}
 					],
@@ -91,7 +91,7 @@ function init() {
 				{gravity: 2,
 				rows:[
 					{view:"label", id:"label_pump_2", label:"Pump 2", align:"center"},
-					{view:"segmented", id:"selector_pump_2", align:"right", multiview:true, options: [
+					{view:"segmented", id:"selector_pump_2", align:"right", options: [
 						{ id:"off", value:"Off"},
 						{ id:"on", value:"On"}
 					],
@@ -108,7 +108,7 @@ function init() {
 				{gravity: 2,
 				rows:[
 					{view:"label", id:"label_valve", label:"Valve", align:"center"},
-					{view:"segmented", id:"selector_valve", align:"right", multiview:true, options: [
+					{view:"segmented", id:"selector_valve", align:"right", options: [
 						{ id:"off", value:"Off"},
 						{ id:"on", value:"On"},
 						{ id:"float", value:"Float"}
@@ -173,6 +173,19 @@ function init() {
 			]
 		}
 	});
+
+	// prevent menu from automatically being dismissed
+	webix.event( $$("root").$view, "click", function(e){
+		var trg = e.target || e.srcElement;
+		if ( ! $$("menuToggleButton").$view.contains(trg)) {
+			e.showpopup = true;
+		}
+	});
+
+	// show menu on initial load
+	setTimeout( function() {
+		$$("menu").show();
+	}, 50);
 
 	// timer to pull temperature data
 	window.setInterval(function() {
@@ -252,14 +265,14 @@ function init() {
 					var selectorUpdate = function(selector, value) {
 						if (selector.getValue() != value) {
 							selector.blockEvent();
-							selector.setValue( (value ? "on":"off") );
+							selector.setValue(value);
 							selector.unblockEvent();
 						}
 					}
 
 					selectorUpdate( $$("selector_valve"), stateData.controls.valve );
-					selectorUpdate( $$("selector_pump_1"), stateData.controls.pump1 );
-					selectorUpdate( $$("selector_pump_2"), stateData.controls.pump2 );
+					selectorUpdate( $$("selector_pump_1"), (stateData.controls.pump1 ? "on":"off") );
+					selectorUpdate( $$("selector_pump_2"), (stateData.controls.pump2 ? "on":"off") );
 
 					console.log("updating our state counter from "+ g_stateCounter
 							+ " to " + statusData.stateCounter);
