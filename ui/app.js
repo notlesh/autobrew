@@ -252,7 +252,7 @@ function init() {
 					var selectorUpdate = function(selector, value) {
 						if (selector.getValue() != value) {
 							selector.blockEvent();
-							selector.setValue(value);
+							selector.setValue( (value ? "on":"off") );
 							selector.unblockEvent();
 						}
 					}
