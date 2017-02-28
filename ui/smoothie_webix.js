@@ -17,11 +17,18 @@ webix.protoUI({
 				interpolation:"linear", 
 				maxValue:220, 
 				minValue:40,
+				yMinFormatter: function(min, precision) {
+					return parseFloat(min).toFixed(precision) + "\xB0F";
+				},
+				yMaxFormatter: function(max, precision) {
+					return parseFloat(max).toFixed(precision) + "\xB0F";
+				},
 				grid: {
 					millisPerLine: 60000,
 					verticalSections: 9,
 					strokeStyle: 'rgba(119,119,119,0.5)'
-				}
+				},
+				labels: { fillStyle:'#CCCCCC', fontSize:15, precision:0 }
 		});
 
 		this.smoothie.streamTo(elm);
