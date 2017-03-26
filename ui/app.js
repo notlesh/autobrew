@@ -34,9 +34,95 @@ function init() {
 				view:"toolbar", id: "bottomBar", padding: 5, cols:[
 					{ view: "icon", icon: "gear", click:function() {
 
-							window.graphDisplayed = false;
+							// window.graphDisplayed = false;
+							// redrawTempLayout();
 
-							redrawTempLayout();
+							// graph config window
+
+							var configWindow = $$("graph_config_window");
+							if (typeof configWindow === "undefined") {
+								configWindow = webix.ui({
+									view: "window",
+									id: "graph_config_window",
+									// head: "Graph Configuration",
+									css: "graphConfig",
+									width: 800,
+									head: {
+										cols: [
+											{view: "label", label: "Graph Configuration"},
+											{view:"button", label:"X", width:30, click:("$$('graph_config_window').hide();")},
+										]
+									},
+									body: {
+										view: "form",
+										modal: "true",
+										elements: [
+											{label: "MPP", view:"segmented", id:"selector_graph_mpp", value: 1000, options: [
+													{ id:100, value:"100"},
+													{ id:500, value:"500"},
+													{ id:1000, value:"1000"},
+													{ id:5000, value:"5000"},
+													{ id:10000, value:"10000"},
+													{ id:50000, value:"50000"}
+												],
+												on: {
+													onChange: function(newValue, oldValue) {
+														$$("probes_data_view").smoothie.options.millisPerPixel = newValue;
+													}
+												}
+											},
+											{label: "Vert Lines", view:"segmented", id:"selector_graph_vert", value: 60000, options: [
+													{ id:1000, value:"1s"},
+													{ id:5000, value:"5s"},
+													{ id:10000, value:"10s"},
+													{ id:60000, value:"1m"},
+													{ id:300000, value:"5m"},
+													{ id:600000, value:"10m"},
+													{ id:3000000, value:"30m"},
+													{ id:6000000, value:"1h"},
+												],
+												on: {
+													onChange: function(newValue, oldValue) {
+														$$("probes_data_view").smoothie.options.grid.millisPerLine = newValue;
+													}
+												}
+											},
+											{label: "Min", view:"segmented", id:"selector_graph_min", value: 40, options: [
+													{ id:40, value:"40"},
+													{ id:60, value:"60"},
+													{ id:80, value:"80"},
+													{ id:100, value:"100"},
+													{ id:120, value:"120"}
+												],
+												on: {
+													onChange: function(newValue, oldValue) {
+														$$("probes_data_view").smoothie.options.minValue = newValue;
+													}
+												}
+											},
+											{label: "Interpolation", view:"segmented", id:"selector_graph_interp", value: "linear", options: [
+													{ id:"bezier", value:"Bezier"},
+													{ id:"linear", value:"Linear"},
+													{ id:"step", value:"Step"},
+												],
+												on: {
+													onChange: function(newValue, oldValue) {
+														$$("probes_data_view").smoothie.options.interpolation = newValue;
+													}
+												}
+											},
+										]
+									}
+								});
+								configWindow.show();
+								configWindow.setPosition(30, 30);
+							} else {
+								if (configWindow.isVisible()) {
+									configWindow.hide();
+								} else {
+									configWindow.show();
+								}
+							}
 						}
 					},
 					{ id: "tempList", cols: [] },

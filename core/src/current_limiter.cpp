@@ -102,7 +102,7 @@ void CurrentLimiter::updatePinConfiguration(const CurrentLimiter::PinConfigurati
 	}
 
 	CurrentLimiter::PinConfiguration& existingConfig = itr->second;
-	Log::f("Updating pin configuration for %s", config._name.c_str());
+	// Log::f("Updating pin configuration for %s", config._name.c_str());
 
 	if (existingConfig._pwm != config._pwm) {
 		throw RollerException("Cannot convert a pin to PWW or vise versa after initialization");
@@ -167,6 +167,7 @@ void CurrentLimiter::evaluateConfiguration() {
 	//		make 2 passes: one to disable any pins that should be off and then finally
 	//		a second to turn on any pins that should be on
 
+	/*
 	Log::f("CurrentLimiter::evaluateConfiguration()");
 
 	Log::f("  Current configuration:");
@@ -181,16 +182,17 @@ void CurrentLimiter::evaluateConfiguration() {
 			Log::f("    PWM load:   %.3f", config._pwmLoad);
 		}
 	}
+	*/
 
 	uint32_t available = _maxMilliAmps;
-	Log::f("  Max available current: %u mA", _maxMilliAmps);
+	// Log::f("  Max available current: %u mA", _maxMilliAmps);
 
 	available -= _baseMilliAmps;
-	Log::f("  Base current: %u mA", _baseMilliAmps);
-	Log::f("  Available: %u mA", available);
+	// Log::f("  Base current: %u mA", _baseMilliAmps);
+	// Log::f("  Available: %u mA", available);
 
 	// first, turn on all critical non-pwm pins
-	Log::f("  Turning on critical non-PWM pins...");
+	// Log::f("  Turning on critical non-PWM pins...");
 	for (const auto& entry : _pinConfigurations) {
 		const PinConfiguration& config = entry.second;
 		PinState& state = _pinStates[config._pinNumber];
@@ -200,11 +202,7 @@ void CurrentLimiter::evaluateConfiguration() {
 			if (state._desiredState) {
 
 				int32_t remainder = (available - config._milliAmps);
-				Log::f("    %s: %u - %u = %d",
-						config._name.c_str(),
-						available,
-						config._milliAmps, 
-						remainder);
+				// Log::f("    %s: %u - %u = %d", config._name.c_str(), available, config._milliAmps, remainder);
 
 				if (remainder > 0) {
 					// update set state
@@ -240,11 +238,11 @@ void CurrentLimiter::evaluateConfiguration() {
 	}
 
 	// TODO:
-	Log::f("  TODO:   critical PWM pins");
-	Log::f("  TODO:   non-critical non-PWM pins");
+	// Log::f("  TODO:   critical PWM pins");
+	// Log::f("  TODO:   non-critical non-PWM pins");
 
 
-	Log::f("  Turning on non-critical PWM pins...");
+	// Log::f("  Turning on non-critical PWM pins...");
 
 	// make a first pass to tally the desired mA
 	double totalDesiredMilliAmps = 0.0f;
@@ -253,20 +251,16 @@ void CurrentLimiter::evaluateConfiguration() {
 
 		if (! config._critical && config._pwm) {
 			double loadMA = ((float)config._milliAmps * config._pwmLoad);
-			Log::f("    %s wants %.3f mA (%.3f * %u)",
-					config._name.c_str(),
-					(float)loadMA,
-					config._pwmLoad,
-					config._milliAmps);
+			// Log::f("    %s wants %.3f mA (%.3f * %u)", config._name.c_str(), (float)loadMA, config._pwmLoad, config._milliAmps);
 			totalDesiredMilliAmps += loadMA;
 		}
 	}
 
 	double availableRatio = ((double)available / totalDesiredMilliAmps);
 
-	Log::f("    Total desired mA: %.1f", (float)totalDesiredMilliAmps);
-	Log::f("    Available mA:     %u", available);
-	Log::f("    Available ratio:  %.3f", availableRatio);
+	// Log::f("    Total desired mA: %.1f", (float)totalDesiredMilliAmps);
+	// Log::f("    Available mA:     %u", available);
+	// Log::f("    Available ratio:  %.3f", availableRatio);
 
 	// if there is enough to go around, give everyone what they want
 	if (totalDesiredMilliAmps > 0.001f) { // TODO: this precludes very small current demands
@@ -277,9 +271,7 @@ void CurrentLimiter::evaluateConfiguration() {
 				if (! config._critical && config._pwm) {
 					PinState& state = _pinStates[config._pinNumber];
 					state._pwmLoad = config._pwmLoad;
-					Log::f("    %s gets what he wants: %.3f",
-							config._name.c_str(),
-							(float)state._pwmLoad);
+					// Log::f("    %s gets what he wants: %.3f", config._name.c_str(), (float)state._pwmLoad);
 				}
 			}
 		} else {
@@ -291,11 +283,7 @@ void CurrentLimiter::evaluateConfiguration() {
 					// TODO: configure as desired
 					double loadMA = (double)config._milliAmps * (double)config._pwmLoad;
 					double load = (loadMA * ((double)available / totalDesiredMilliAmps));
-					Log::f("    %s's portion: %.3f * %.3f = %.3f",
-							config._name.c_str(),
-							(float)loadMA,
-							(float)availableRatio,
-							(float)load);
+					// Log::f("    %s's portion: %.3f * %.3f = %.3f", config._name.c_str(), (float)loadMA, (float)availableRatio, (float)load);
 					
 					PinState& state = _pinStates[config._pinNumber];
 					state._pwmLoad = availableRatio * config._pwmLoad;
@@ -320,16 +308,13 @@ void CurrentLimiter::evaluateConfiguration() {
 		PinState& state = _pinStates[config._pinNumber];
 
 		if (config._pwm) {
-			Log::i("Setting pin %d to %.3f (PWM), %u (freq)",
-					config._pinNumber,
-					state._pwmLoad,
-					config._pwmFrequency);
+			// Log::i("Setting pin %d to %.3f (PWM), %u (freq)", config._pinNumber, state._pwmLoad, config._pwmFrequency);
 			state._pwmController->setLoadCycle(state._pwmLoad);
 			state._pwmController->setFrequency(config._pwmFrequency);
 			state._pwmController->unpause();
 		} else if (state._enabled) {
 			state._ioSwitch->setState(true);
-			Log::i("Setting pin %d to on", config._pinNumber);
+			// Log::i("Setting pin %d to on", config._pinNumber);
 		}
 	}
 

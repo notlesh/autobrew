@@ -25,3 +25,7 @@ html, body {
 	font-size: small;
 	font-weight: normal;
 }
+
+.graphConfig {
+	opacity: 0.75;
+}

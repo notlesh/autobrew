@@ -196,10 +196,12 @@ void handleRequest( FCGX_Request& request ) {
 	std::string requestMethod = FCGX_GetParam("REQUEST_METHOD", request.envp);
 	std::string requestUri = FCGX_GetParam("REQUEST_URI", request.envp);
 
+	/*
 	Log::i( "handling request uri:    %s", requestUri.c_str());
 	Log::i( "         script name:    %s", scriptName.c_str());
 	Log::i( "         path info:      %s", pathInfo.c_str());
 	Log::i( "         request method: %s", requestMethod.c_str());
+	*/
 
 	// parse URI
 	std::map<std::string, std::string> params;
@@ -221,7 +223,6 @@ void handleRequest( FCGX_Request& request ) {
 			}
 
 			params[paramParts[0]] = paramParts[1];
-			Log::f("request param: %s = %s", paramParts[0].c_str(), paramParts[1].c_str());
 		}
 	} else {
 		baseUri = requestUri;
@@ -467,7 +468,6 @@ void handleRequest( FCGX_Request& request ) {
 			break;
 	}
 
-	Log::i( "Sending response.." );
 	FCGX_FPrintF( request.out, "Status: %s\r\n", statusResponse.c_str() );
 	FCGX_FPrintF( request.out, "Content-Type: application/json; charset=utf-8\r\n" );
 	FCGX_FPrintF( request.out, "Content-Length: %d\r\n", jsonResponse.size() );

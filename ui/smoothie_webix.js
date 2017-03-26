@@ -12,7 +12,7 @@ webix.protoUI({
 		this.timeSeries = {};
 
 		this.smoothie = new SmoothieChart({
-				millisPerPixel: 1800,
+				millisPerPixel: 1000,
 				// millisPerPixel: mpp, 
 				interpolation:"linear", 
 				maxValue:220, 
